@@ -289,7 +289,7 @@ function App() {
         </div>
       </div>
 
-      <div id="hud_notifs"></div>
+      <div id="fnv_notify"></div>
 
       <div id="fnv_interact" className="fnv_interact fnv_hidden" aria-live="polite">
         <div className="fnv_interact_line1">

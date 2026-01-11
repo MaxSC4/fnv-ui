@@ -1,5 +1,4 @@
 import Events from "./Events";
-import vaultBoyGif from "./assets/vault_boy_thumbs_up.gif";
 
 (function () {
   if (window.__FNV_HUD_INIT__) return;
@@ -13,7 +12,7 @@ import vaultBoyGif from "./assets/vault_boy_thumbs_up.gif";
   const elHudStatus = () => document.getElementById("hud_status");
 
   const elCaps   = () => document.getElementById("caps_value");
-  const elNotifs = () => document.getElementById("hud_notifs");
+  const elNotifs = () => document.getElementById("fnv_notify");
 
   // Compass
   const elCompassBand   = () => document.getElementById("compass_band");
@@ -162,36 +161,88 @@ import vaultBoyGif from "./assets/vault_boy_thumbs_up.gif";
   /* ===================== */
   /* Notifications         */
   /* ===================== */
+  function normalizeIconPath(icon) {
+    const raw = String(icon || "").trim();
+    if (!raw) return "";
+    const fileName = raw.split("/").pop() || "";
+    if (fileName.includes(".")) return raw;
+    return `${raw}.png`;
+  }
+
+  function splitNotifyText(text) {
+    const lines = String(text || "").split("\n");
+    if (lines.length <= 1) return { title: String(text || ""), subtitle: "" };
+    return { title: lines[0], subtitle: lines.slice(1).join(" ") };
+  }
+
   function notify(payload) {
-    const text = String(payload?.text ?? "");
-    if (!text) return;
+    const baseText = payload?.text ?? "";
+    const titleRaw = payload?.title ?? payload?.subject ?? "";
+    const subtitleRaw = payload?.subtitle ?? payload?.detail ?? payload?.body ?? "";
+    const iconRaw = normalizeIconPath(payload?.icon ?? payload?.icon_path ?? payload?.icon_url ?? "");
+
+    const text = String(titleRaw || baseText || "");
+    const subtitle = String(subtitleRaw || "");
+    const lines = (!titleRaw && !subtitleRaw) ? splitNotifyText(baseText) : null;
+
+    if (!text && !lines?.title) return;
 
     const notifs = elNotifs();
     if (!notifs) return;
 
     const ms = Number(payload?.ms ?? 3500);
 
-    const div = document.createElement("div");
-    div.className = "notif";
+    const wrap = document.createElement("div");
+    wrap.className = "fnv_notify_item";
 
-    const img = document.createElement("img");
-    img.className = "notif_gif";
-    img.src = vaultBoyGif;
-    img.alt = "";
-    img.setAttribute("aria-hidden", "true");
+    const frame = document.createElement("div");
+    frame.className = "fnv_notify_frame";
 
-    const span = document.createElement("span");
-    span.className = "notif_text";
-    span.textContent = text;
+    const iconEl = document.createElement("div");
+    iconEl.className = "fnv_notify_icon";
+    if (iconRaw) {
+      const img = document.createElement("img");
+      img.className = "fnv_notify_icon_img";
+      img.src = iconRaw;
+      img.alt = "";
+      img.setAttribute("aria-hidden", "true");
+      iconEl.appendChild(img);
+    } else {
+      iconEl.classList.add("empty");
+    }
 
-    div.appendChild(img);
-    div.appendChild(span);
+    const textEl = document.createElement("div");
+    textEl.className = "fnv_notify_text";
 
-    notifs.append(div);
+    const titleEl = document.createElement("div");
+    titleEl.className = "fnv_notify_title";
+    titleEl.textContent = lines ? lines.title : text;
 
+    const subtitleEl = document.createElement("div");
+    subtitleEl.className = "fnv_notify_subtitle";
+    subtitleEl.textContent = lines ? lines.subtitle : subtitle;
+    if (!subtitleEl.textContent) subtitleEl.classList.add("fnv_hidden");
+
+    textEl.appendChild(titleEl);
+    textEl.appendChild(subtitleEl);
+
+    frame.appendChild(iconEl);
+    frame.appendChild(textEl);
+    wrap.appendChild(frame);
+
+    notifs.appendChild(wrap);
+
+    requestAnimationFrame(() => {
+      wrap.classList.add("show");
+    });
+
+    const lifespan = clamp(ms, 800, 15000);
     window.setTimeout(() => {
-      div.remove();
-    }, clamp(ms, 800, 15000));
+      wrap.classList.add("hide");
+      window.setTimeout(() => {
+        wrap.remove();
+      }, 260);
+    }, lifespan);
   }
 
   /* ===================== */
@@ -1014,7 +1065,7 @@ function ensureUiFocus() {
         "hud_right_fnv",
         "fnv_dialog",
         "fnv_shop",
-        "hud_notifs",
+        "fnv_notify",
         "fnv_interact",
         "fnv_reticle",
         "fnv-admin-console",
@@ -1176,7 +1227,7 @@ function bindDialogMouse(optsEl){
   // Hide/show gameplay HUD blocks
   const hudLeft = document.getElementById("hud_hp_fallout");
   const hudRight = document.getElementById("hud_right_fnv");
-  const notifs = document.getElementById("hud_notifs");
+  const notifs = document.getElementById("fnv_notify");
   const prompt = document.getElementById("fnv_interact");
   const ret = document.getElementById("fnv_reticle");
   const inv = document.getElementById("fnv_inventory");
@@ -1185,7 +1236,7 @@ function bindDialogMouse(optsEl){
 
   if (hudLeft) hudLeft.style.display = gameplayVisible ? "inline-block" : "none";
   if (hudRight) hudRight.style.display = gameplayVisible ? "block" : "none";
-  if (notifs) notifs.style.display = gameplayVisible ? "flex" : "none";
+  if (notifs) notifs.style.display = "flex";
   if (inv) inv.classList.toggle("fnv_hidden", uiMode !== "inventory");
 
   if (!gameplayVisible) {
@@ -1209,14 +1260,14 @@ function setHudVisible(payload){
   const visible = payload?.visible !== false;
   const hudLeft = document.getElementById("hud_hp_fallout");
   const hudRight = document.getElementById("hud_right_fnv");
-  const notifs = document.getElementById("hud_notifs");
+  const notifs = document.getElementById("fnv_notify");
   const prompt = document.getElementById("fnv_interact");
   const ret = document.getElementById("fnv_reticle");
   const container = elContainer();
 
   if (hudLeft) hudLeft.style.display = visible ? "inline-block" : "none";
   if (hudRight) hudRight.style.display = visible ? "block" : "none";
-  if (notifs) notifs.style.display = visible ? "flex" : "none";
+  if (notifs) notifs.style.display = "flex";
   if (prompt) prompt.classList.toggle("fnv_hidden", !visible);
   if (ret) ret.classList.toggle("fnv_hidden", !visible);
   if (container) container.classList.toggle("fnv_hidden", !visible || !containerState?.open);
