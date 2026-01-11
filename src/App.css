@@ -626,8 +626,7 @@ body{
   text-transform: uppercase;
   letter-spacing: 0.6px;
   text-shadow: 0 0 2px rgba(255,182,66,0.18);
-  background: rgba(0,0,0,0.45);
-  backdrop-filter: blur(2px);
+  background: rgba(0,0,0,0.55);
 }
 
 .fnv_repair_panel{
@@ -667,7 +666,7 @@ body{
   font-size: 14px;
   text-transform: none;
   opacity: 0.9;
-  cursor: default;
+  cursor: pointer;
   pointer-events: auto;
   line-height: 1.2;
 }

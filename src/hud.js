@@ -301,6 +301,17 @@ import Events from "./Events";
     return slots;
   }
 
+  function syncRepairSelection() {
+    const listEl = elRepairList();
+    if (!listEl) return;
+    const rows = Array.from(listEl.children);
+    rows.forEach((row, idx) => {
+      row.classList.toggle("selected", idx === repairMenuState.selected);
+      const marker = row.querySelector(".fnv_repair_row_marker");
+      if (marker) marker.textContent = idx === repairMenuState.selected ? ">" : "";
+    });
+  }
+
   function renderRepairMenu() {
     const wrap = elRepairMenu();
     const listEl = elRepairList();
@@ -337,22 +348,24 @@ import Events from "./Events";
       row.appendChild(label);
 
       row.addEventListener("mouseenter", () => {
+        if (repairMenuState.selected === idx) return;
         repairMenuState.selected = idx;
-        renderRepairMenu();
+        syncRepairSelection();
       });
 
-      row.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+      const handleSelect = () => {
         repairMenuState.selected = idx;
         confirmRepairSelection();
-      });
+      };
+
+      row.addEventListener("click", handleSelect);
 
       listEl.appendChild(row);
     });
 
     wrap.classList.remove("fnv_hidden");
     wrap.setAttribute("aria-hidden", "false");
+    syncRepairSelection();
   }
 
   function openRepairMenu(item, category) {
@@ -368,6 +381,7 @@ import Events from "./Events";
     repairMenuState.category = category || null;
     renderRepairMenu();
     Events.Call("Inv:ModalOpen", {});
+    ensureUiFocus();
     return true;
   }
 
@@ -387,6 +401,29 @@ import Events from "./Events";
     if (!slot || !repairMenuState.item) return;
     sendInvAction("use", repairMenuState.item, repairMenuState.category, slot.slot);
     closeRepairMenu();
+  }
+
+  function handleRepairMenuKey(key) {
+    if (!repairMenuState.open) return false;
+    if (key === "up") {
+      repairMenuState.selected = Math.max(0, repairMenuState.selected - 1);
+      syncRepairSelection();
+      return true;
+    }
+    if (key === "down") {
+      repairMenuState.selected = Math.min(repairMenuState.slots.length - 1, repairMenuState.selected + 1);
+      syncRepairSelection();
+      return true;
+    }
+    if (key === "action" || key === "confirm") {
+      confirmRepairSelection();
+      return true;
+    }
+    if (key === "cancel" || key === "back") {
+      closeRepairMenu();
+      return true;
+    }
+    return false;
   }
 
   /* ===================== */
@@ -2900,18 +2937,22 @@ document.addEventListener("keydown", (e) => {
 
   if (e.key === "ArrowUp") {
     repairMenuState.selected = Math.max(0, repairMenuState.selected - 1);
-    renderRepairMenu();
+    syncRepairSelection();
     e.preventDefault();
+    e.stopImmediatePropagation();
   } else if (e.key === "ArrowDown") {
     repairMenuState.selected = Math.min(repairMenuState.slots.length - 1, repairMenuState.selected + 1);
-    renderRepairMenu();
+    syncRepairSelection();
     e.preventDefault();
+    e.stopImmediatePropagation();
   } else if (e.code === "KeyE" || e.key === "e" || e.key === "E" || e.code === "Enter" || e.code === "NumpadEnter" || e.key === "Enter") {
     confirmRepairSelection();
     e.preventDefault();
+    e.stopImmediatePropagation();
   } else if (e.key === "Backspace") {
     closeRepairMenu();
     e.preventDefault();
+    e.stopImmediatePropagation();
   }
 }, true);
 
@@ -3092,6 +3133,20 @@ Events.Subscribe("Inv:Close", () => renderInventory({ open: false }));
 Events.Subscribe("Inv:Key", (payload) => {
   if (!invState?.open) return;
   const key = String(payload?.key ?? "");
+  if (repairMenuState.open) {
+    const mapped =
+      key === "up" ? "up" :
+      key === "down" ? "down" :
+      key === "left" ? "up" :
+      key === "right" ? "down" :
+      key === "action" || key === "use" || key === "e" ? "action" :
+      key === "back" || key === "cancel" ? "cancel" :
+      "";
+    if (mapped) {
+      handleRepairMenuKey(mapped);
+    }
+    return;
+  }
   if (key === "up") {
     moveInvSelection(-1);
   } else if (key === "down") {
