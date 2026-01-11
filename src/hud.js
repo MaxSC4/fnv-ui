@@ -51,6 +51,8 @@ import Events from "./Events";
   const elTransferDetailsIcon = () => document.getElementById("fnv_transfer_details_icon");
   const elTransferStatsGrid = () => document.getElementById("fnv_transfer_stats_grid");
   const elTransferItemName = () => document.getElementById("fnv_transfer_item_name");
+  const elRepairMenu = () => document.getElementById("fnv_repair_menu");
+  const elRepairList = () => document.getElementById("fnv_repair_list");
 
   /* ===================== */
   /* Utils                 */
@@ -243,6 +245,148 @@ import Events from "./Events";
         wrap.remove();
       }, 260);
     }, lifespan);
+  }
+
+  /* ===================== */
+  /* Repair Kit Menu       */
+  /* ===================== */
+  const repairMenuState = {
+    open: false,
+    slots: [],
+    selected: 0,
+    item: null,
+    category: null,
+    equipped: null
+  };
+
+  function isRepairKit(item) {
+    const raw = String(item?.item_id ?? item?.id ?? "").toLowerCase();
+    if (raw === "repair_kit" || raw === "repairkit") return true;
+    if (raw.includes("repair_kit")) return true;
+    return !!item?.repair_kit || !!item?.is_repair_kit;
+  }
+
+  function formatRepairLabel(slotLabel, item) {
+    const name = String(item?.name ?? item?.item_id ?? "").trim();
+    const cnd = Number(item?.cnd);
+    const max = Number(item?.max_cnd ?? 0);
+    let suffix = "";
+    if (Number.isFinite(cnd) && Number.isFinite(max) && max > 0) {
+      suffix = ` (${Math.round((cnd / max) * 100)}%)`;
+    }
+    if (name) return `${slotLabel} - ${name}${suffix}`;
+    return slotLabel;
+  }
+
+  function buildRepairSlots() {
+    const slots = [];
+    const equipItems = repairMenuState.equipped ?? lastHudState?.equipped_items ?? {};
+    const equip = lastHudState?.equip ?? {};
+
+    const weaponItem = equipItems.weapon || (equip.weapon ? { name: "ARME" } : null);
+    if (weaponItem) {
+      slots.push({ label: formatRepairLabel("ARME", weaponItem), slot: "weapon", item: weaponItem });
+    }
+
+    const bodyItem = equipItems.armor_body || equipItems.armor || (equip.armor_body || equip.armor ? { name: "ARMURE" } : null);
+    if (bodyItem) {
+      slots.push({ label: formatRepairLabel("ARMURE", bodyItem), slot: "armor_body", item: bodyItem });
+    }
+
+    const headItem = equipItems.armor_head || (equip.armor_head ? { name: "CASQUE" } : null);
+    if (headItem) {
+      slots.push({ label: formatRepairLabel("CASQUE", headItem), slot: "armor_head", item: headItem });
+    }
+
+    return slots;
+  }
+
+  function renderRepairMenu() {
+    const wrap = elRepairMenu();
+    const listEl = elRepairList();
+    if (!wrap || !listEl) return;
+
+    if (!repairMenuState.open) {
+      wrap.classList.add("fnv_hidden");
+      wrap.setAttribute("aria-hidden", "true");
+      listEl.innerHTML = "";
+      return;
+    }
+
+    listEl.innerHTML = "";
+    repairMenuState.slots.forEach((slot, idx) => {
+      const row = document.createElement("div");
+      row.className = "fnv_repair_row";
+      if (idx === repairMenuState.selected) row.classList.add("selected");
+
+      const marker = document.createElement("div");
+      marker.className = "fnv_repair_row_marker";
+      marker.textContent = idx === repairMenuState.selected ? ">" : "";
+
+      const icon = document.createElement("div");
+      icon.className = "fnv_repair_icon";
+      if (slot?.item?.icon) {
+        icon.innerHTML = `<img src="${slot.item.icon}" alt="">`;
+      }
+
+      const label = document.createElement("div");
+      label.textContent = slot.label;
+
+      row.appendChild(marker);
+      row.appendChild(icon);
+      row.appendChild(label);
+
+      row.addEventListener("mouseenter", () => {
+        repairMenuState.selected = idx;
+        renderRepairMenu();
+      });
+
+      row.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        repairMenuState.selected = idx;
+        confirmRepairSelection();
+      });
+
+      listEl.appendChild(row);
+    });
+
+    wrap.classList.remove("fnv_hidden");
+    wrap.setAttribute("aria-hidden", "false");
+  }
+
+  function openRepairMenu(item, category) {
+    const invEquipped = invState?.data?.equipped_items ?? null;
+    repairMenuState.equipped = invEquipped;
+    const slots = buildRepairSlots();
+    if (!slots.length) return false;
+
+    repairMenuState.open = true;
+    repairMenuState.slots = slots;
+    repairMenuState.selected = 0;
+    repairMenuState.item = item || null;
+    repairMenuState.category = category || null;
+    renderRepairMenu();
+    Events.Call("Inv:ModalOpen", {});
+    return true;
+  }
+
+  function closeRepairMenu() {
+    repairMenuState.open = false;
+    repairMenuState.slots = [];
+    repairMenuState.selected = 0;
+    repairMenuState.item = null;
+    repairMenuState.category = null;
+    repairMenuState.equipped = null;
+    renderRepairMenu();
+    Events.Call("Inv:ModalClose", {});
+  }
+
+  function confirmRepairSelection() {
+    const slot = repairMenuState.slots[repairMenuState.selected];
+    if (!slot || !repairMenuState.item) return;
+    sendInvAction("use", repairMenuState.item, repairMenuState.category, slot.slot);
+    closeRepairMenu();
   }
 
   /* ===================== */
@@ -1069,6 +1213,7 @@ function ensureUiFocus() {
         "fnv_interact",
         "fnv_reticle",
         "fnv-admin-console",
+        "fnv_repair_menu",
       ];
       ids.forEach((id) => {
         const els = document.querySelectorAll(`#${id}`);
@@ -1238,6 +1383,9 @@ function bindDialogMouse(optsEl){
   if (hudRight) hudRight.style.display = gameplayVisible ? "block" : "none";
   if (notifs) notifs.style.display = "flex";
   if (inv) inv.classList.toggle("fnv_hidden", uiMode !== "inventory");
+  if (uiMode !== "inventory" && repairMenuState.open) {
+    closeRepairMenu();
+  }
 
   if (!gameplayVisible) {
     interactShowState = false;
@@ -2638,15 +2786,23 @@ function getPrimaryInvAction(item){
   return order.find((a) => actions.includes(a)) || actions[0] || null;
 }
 
-function sendInvAction(action, item, category){
+function sendInvAction(action, item, category, targetSlot){
   if (!action || !item) return;
-  Events.Call("Inv:Action", {
+
+  if (action === "use" && !targetSlot && isRepairKit(item)) {
+    openRepairMenu(item, category);
+    return;
+  }
+
+  const payload = {
     action,
     item_id: String(item?.item_id ?? ""),
     instance_id: item?.instance_id ?? null,
     stack_key: item?.stack_key ?? null,
     category
-  });
+  };
+  if (targetSlot) payload.target_slot = targetSlot;
+  Events.Call("Inv:Action", payload);
 }
 
 function renderInventory(state){
@@ -2738,9 +2894,31 @@ function switchInvCategory(dir){
   renderInventory(invState.data);
 }
 
+// Keybinds repair menu
+document.addEventListener("keydown", (e) => {
+  if (!repairMenuState.open) return;
+
+  if (e.key === "ArrowUp") {
+    repairMenuState.selected = Math.max(0, repairMenuState.selected - 1);
+    renderRepairMenu();
+    e.preventDefault();
+  } else if (e.key === "ArrowDown") {
+    repairMenuState.selected = Math.min(repairMenuState.slots.length - 1, repairMenuState.selected + 1);
+    renderRepairMenu();
+    e.preventDefault();
+  } else if (e.code === "KeyE" || e.key === "e" || e.key === "E" || e.code === "Enter" || e.code === "NumpadEnter" || e.key === "Enter") {
+    confirmRepairSelection();
+    e.preventDefault();
+  } else if (e.key === "Backspace") {
+    closeRepairMenu();
+    e.preventDefault();
+  }
+}, true);
+
 // Keybinds inventory
 document.addEventListener("keydown", (e) => {
   if (!invState?.open) return;
+  if (repairMenuState.open) return;
   const active = document.activeElement;
   const typing = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA");
   if (typing) return;
