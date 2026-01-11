@@ -1,70 +1,33 @@
-# Getting Started with Create React App
+# FNV UI
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Modern React WebUI for the Fallout: New Vegas inspired HUD used on a Nanos World server.
 
-## Available Scripts
+This repo hosts the full client UI layer (HUD, dialogs, shop, inventory, containers, transfer screen) and stays tightly coupled to the server logic in the main project:
+https://github.com/MaxSC4/fnv-core
 
-In the project directory, you can run:
+## What is inside
 
-### `npm start`
+- HUD for HP/AP/compass/conditions/ammo, plus contextual prompts
+- Dialog system with icons and keyboard navigation
+- Shop UI (barter layout) with quantities, carts, and confirmations
+- Inventory UI (items + SPECIAL/Stats page)
+- Enemy target bar
+- Container loot UI (compact view and transfer screen)
+- Custom styling for the Fallout NV look and pip-boy palette
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## UI conventions
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+- Amber is the primary palette color (Fallout NV tone)
+- Monospace/condensed type, no rounded corners, no modern card effects
+- Scanlines and CRT-like touches are kept subtle
+- Keyboard first navigation, mouse allowed but not required
 
-### `npm test`
+## Integration notes
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+The UI reacts to events and payloads coming from the core server repo.
+All WebUI events and contracts are documented and implemented there:
+https://github.com/MaxSC4/fnv-core
 
-### `npm run build`
+## Status
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+This UI is under active development and matches the gameplay systems in the core repo.

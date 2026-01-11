@@ -1,38 +1,2201 @@
-.App {
-  text-align: center;
+:root{
+  --pip: rgb(255,182,66);
+  --pip-dim: rgba(255,182,66,0.25);
+  --pip-dimmer: rgba(255,182,66,0.12);
+  --pip-green: #00ff66;
+  --pip-filter: brightness(0) saturate(100%) invert(82%) sepia(62%) saturate(510%) hue-rotate(353deg) brightness(102%) contrast(102%);
+  --pip-green-filter: brightness(0) saturate(100%) invert(66%) sepia(62%) saturate(523%) hue-rotate(79deg) brightness(96%) contrast(103%);
+  --pip-red: #ff3b3b;
+  --bg: rgba(0,0,0,0.0);
+  --panel: rgba(0,0,0,0.0);
+  --compass-color: var(--pip);
+  --right-box-h: 40px;
+  --right-box-gap: 8px;
+  --mic-box-w: 48px;
 }
 
-.App-logo {
-  height: 40vmin;
+html, body, #root, .fnv_root{
+  width: 100%;
+  height: 100%;
+}
+
+body{
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+}
+
+.fnv_root{
+  position: relative;
+  width: 100%;
+  height: 100%;
+  color: var(--pip);
+}
+
+*, *::before, *::after{
+  box-sizing: border-box;
+}
+
+#hud_hp_fallout{
+  display: inline-block;
+  position: fixed;
+  left: 18px;
+  bottom: 22px;
+  width: min(520px, calc(100vw - 24px));
+  color: var(--pip);
+  font-family: ui-monospace, Consolas, Menlo, Monaco, "Liberation Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  text-shadow: 0 0 2px rgba(255,182,66,0.18); /* micro glow */
+  overflow: visible
+}
+
+#hp_bar{
+  box-sizing: content-box;
+  overflow: hidden;
+}
+
+/* HP + status line */
+.hud_topline{
+  display:flex;
+  align-items:flex-end;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.hud_tag{
+  font-size: 18px;
+  line-height: 1;
+}
+.hud_status{
+  font-size: 18px;
+  line-height: 1;
+  opacity: 0.85;
+}
+
+
+/* ===== FNV HP BAR — final tuning ===== */
+
+/* La barre sert de cadre */
+.fnv_bar{
+  position: relative;
+  width: 100%;
+  height: 30px;
+  box-sizing: border-box;
+
+  /* Cadre Fallout propre */
+  border-left: 3px solid var(--pip);
+  border-right: 3px solid var(--pip);
+  border-bottom: 3px solid var(--pip);
+  border-top: none;
+
+  background: transparent;
+  overflow: hidden;
+}
+
+/* Track interne = zone utile */
+.fnv_track{
+  position: absolute;
+  left: 4px;   /* = border-left */
+  right: 3px;  /* = border-right */
+  top: 0;
+  bottom: 3px; /* = border-bottom (optionnel) */
+  overflow: hidden;
+
+  --tick-w: 8px;
+  --gap: 2px;
+
+  background: transparent;
+}
+/*  */
+/* Fill : ticks pleins (vert) + width variable */
+.fnv_track_fill{
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 0%;
+  overflow: hidden;
+
+  z-index: 1;
+
+  background-image: linear-gradient(
+    to right,
+    var(--pip) 0px,
+    var(--pip) var(--tick-w),
+    transparent var(--tick-w),
+    transparent calc(var(--tick-w) + var(--gap))
+  );
+  background-size: calc(var(--tick-w) + var(--gap)) 100%;
+  background-repeat: repeat;
+
+  opacity: 1;
+}
+
+#ap_fill{
+  transition: width 140ms linear;
+  left: auto;
+  right: 0;
+  transform: scaleX(-1);
+  transform-origin: center;
+}
+
+
+#hp_fill{
+  transition: width 140ms linear;
+  left: 0;
+  right: auto;
+}
+
+#hp_bar.hp_low .fnv_track_fill{
+  background-image: linear-gradient(
+    to right,
+    var(--pip-red) 0px,
+    var(--pip-red) var(--tick-w),
+    transparent var(--tick-w),
+    transparent calc(var(--tick-w) + var(--gap))
+  );
+  animation: hp_danger_blink 600ms steps(2, end) infinite;
+}
+
+@keyframes hp_danger_blink{
+  0%{ opacity: 1; }
+  50%{ opacity: 0.35; }
+  100%{ opacity: 1; }
+}
+
+#ap_bar.ap_low .fnv_track_fill{
+  background-image: linear-gradient(
+    to right,
+    var(--pip-red) 0px,
+    var(--pip-red) var(--tick-w),
+    transparent var(--tick-w),
+    transparent calc(var(--tick-w) + var(--gap))
+  );
+}
+
+
+
+
+
+
+/* ===================== */
+/* Compass Fallout (render + labels) */
+/* ===================== */
+
+.fnv_compass{
+  position: relative;
+  margin-top: 2px;
+  height: 32px;
+  width: 100%;
+  padding-top: 4px;
+  padding-left: 0;
+  box-sizing: content-box;
+  border-top: 3px solid var(--compass-color);
+  border-left: 3px solid var(--compass-color);
+  border-right: 3px solid transparent;
+}
+
+.fnv_compass_center{
+  position: absolute;
+  left: 50%;
+  top: -2px;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 10px solid var(--compass-color);
+  z-index: 3;
+  pointer-events: none;
+  filter: drop-shadow(0 0 2px rgba(255,182,66,0.35));
+}
+
+/* fenêtre unique qui clip TOUT (ticks + labels) */
+.fnv_compass_viewport{
+  position: relative;
+  width: calc(100% - 6px);
+  margin-left: 6px;
+  height: 28px;
+  overflow: hidden;
+  isolation: isolate;
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 8%, #000 92%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0%, #000 8%, #000 92%, transparent 100%);
+}
+
+/* moving compass band */
+.fnv_compass_band{
+  position: absolute;
+  left: 50%;
+  top: 0;
+  height: 100%;
+  z-index: 2;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
   pointer-events: none;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+.fnv_compass_line{
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 62%;
+  height: 3px;
+  transform: translateY(-50%);
+  background: rgba(255,182,66,0.7);
+  z-index: 1;
+  display: none;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+.fnv_compass_line_segment{
+  position: absolute;
+  top: 62%;
+  height: 3px;
+  transform: translateY(-50%);
+  background: rgba(255,182,66,0.7);
+  z-index: 1;
+}
+
+.fnv_compass_ticks{
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 100%;
+  z-index: 2;
+}
+
+.fnv_compass_tick{
+  position: absolute;
+  top: 62%;
+  width: 2px;
+  background: var(--compass-color);
+  transform: translate(-50%, -100%);
+}
+
+.fnv_compass_tick.small{
+  height: 5px;
+  opacity: 0.75;
+}
+
+.fnv_compass_tick.big{
+  height: 10px;
+  opacity: 0.95;
+}
+
+/* labels dans la même fenêtre */
+.fnv_compass_labels{
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 28px;
+  z-index: 4;
+  pointer-events: none;
+  letter-spacing: 1px;
+  opacity: 0.95;
+}
+
+/* décale un poil vers le bas pour éviter la coupe */
+.fnv_compass_label{
+  position: absolute;
+  top: 62%;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+
+  color: var(--compass-color);
+  font-size: 18px;
+  line-height: 20px;
+  text-shadow: 0 0 2px rgba(255,182,66,0.2);
+  padding: 0 10px;
+  z-index: 4;
+
+  transition: opacity 80ms linear;
+}
+
+.fnv_compass,
+.fnv_compass_viewport{
+  background-image: none !important;
+}
+
+
+/* Right block position */
+#hud_right_fnv{
+  position: fixed;
+  right: 18px;
+  bottom: 22px;
+  width: min(520px, calc(100vw - 24px)); /* même largeur que HP si tu veux symétrie */
+  color: var(--pip);
+  font-family: ui-monospace, Consolas, Menlo, Monaco, "Liberation Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  text-shadow: 0 0 2px rgba(255,182,66,0.18);
+}
+
+/* Align top line on right */
+.hud_topline.right{
+  display:flex;
+  justify-content: flex-end;
+  margin-bottom: 6px;
+}
+
+/* Mirror bar frame (right side) */
+.fnv_bar_right{
+  border-left: 3px solid var(--pip);
+  border-right: 3px solid var(--pip);
+  border-bottom: 3px solid var(--pip);
+  border-top: none;
+}
+
+
+
+
+/* Row holding CND + Ammo */
+.fnv_right_row{
+  margin-top: 2px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--right-box-gap);
+}
+
+
+
+/* ===================== */
+/* CND box               */
+/* ===================== */
+
+.fnv_cnd_box{
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 4px;
+  padding-right: 10px;
+  padding-bottom: 4px;
+  flex: 1 1 0;
+  box-sizing: border-box;
+  height: var(--right-box-h);
+}
+
+
+.fnv_cnd_box::after{
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-top: 3px solid var(--pip);
+  border-right: 3px solid var(--pip);
+  pointer-events: none;
+}
+
+.fnv_cnd_label{
+  font-size: 18px;
+  opacity: 0.95;
+  line-height: 1;
+}
+
+.fnv_cnd_bars{
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 180px;
+  margin-top: 2px;
+  margin-bottom: 4px;
+  padding-right: 6px;
+}
+
+.fnv_cnd_barwrap{
+  position: relative;
+  height: 10px;
+  border: 1px solid var(--pip);
+  background: transparent;
+  overflow: hidden;
+}
+
+.fnv_cnd_barwrap::before,
+.fnv_cnd_barwrap::after{
+  content: none;
+}
+
+
+
+.fnv_cnd_bar{
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 100%;
+}
+
+
+
+.fnv_cnd_empty{
+  background: transparent;
+}
+
+
+
+.fnv_cnd_fill{
+  background: var(--pip);
+  width: 100%;
+  transition: width 120ms linear;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+
+
+/* ===================== */
+/* Ammo box              */
+/* ===================== */
+
+.fnv_ammo_box{
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-top: 4px;
+  padding-left: 10px;
+  padding-right: 10px;
+  padding-bottom: 4px;
+  position: relative;
+  box-sizing: border-box;
+  height: var(--right-box-h);
+}
+
+
+.fnv_ammo_box::after{
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-top: 3px solid var(--pip);
+  border-right: 3px solid var(--pip);
+  pointer-events: none;
+}
+
+
+
+.fnv_ammo{
+  font-size: 22px;
+  opacity: 0.95;
+  letter-spacing: 1px;
+  line-height: 1;
+}
+
+/* Mic status */
+.fnv_mic_box{
+  width: var(--mic-box-w);
+  height: var(--right-box-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-sizing: border-box;
+  padding-top: 4px;
+  padding-right: 6px;
+}
+
+.fnv_mic_box::after{
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-top: 3px solid var(--pip);
+  border-right: 3px solid var(--pip);
+  pointer-events: none;
+}
+
+.fnv_mic_icon{
+  width: 22px;
+  height: 22px;
+  stroke: var(--pip);
+  stroke-width: 2.2;
+}
+
+
+
+
+
+/* Vertical separator between CND and AMMO */
+.fnv_v_separator{
+  display: none;
+}
+
+
+
+/* ===================== */
+/* Interactions          */
+/* ===================== */
+.fnv_hidden{ display:none !important; }
+
+/* ===================== */
+/* Enemy Target HUD      */
+/* ===================== */
+.fnv_enemy{
+  position: fixed;
+  left: 50%;
+  bottom: 100px;
+  transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 4px;
+  z-index: 9997;
+  pointer-events: none;
+}
+
+.fnv_enemy_name{
+  font-family: ui-monospace, Consolas, Menlo, Monaco, "Liberation Mono", monospace;
+  font-size: 16px;
+  line-height: 1;
+  text-transform: none;
+  color: #c63a3a;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.35);
+}
+
+.fnv_enemy_bar{
+  position: relative;
+  width: 260px;
+  height: 20px;
+  background: transparent;
+  overflow: hidden;
+  border-left: 2px solid #c63a3a;
+  border-right: 2px solid #c63a3a;
+  border-bottom: 2px solid #c63a3a;
+  border-top: none;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.35);
+}
+
+.fnv_enemy_fill{
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  top: 0;
+  bottom: 2px;
+  overflow: hidden;
+}
+
+.fnv_enemy_fill::before{
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  height: 100%;
+  width: var(--enemy-pct, 0%);
+  transform: translateX(-50%);
+  transition: width 90ms linear;
+  background-image: linear-gradient(
+    to right,
+    #c63a3a 0px,
+    #c63a3a 6px,
+    transparent 6px,
+    transparent 8px
+  );
+  background-size: 8px 100%;
+  background-repeat: repeat;
+}
+
+/* ===================== */
+/* Inventory (Pip-Boy)   */
+/* ===================== */
+.fnv_inventory{
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  pointer-events: auto;
+  color: var(--pip);
+  font-family: ui-monospace, Consolas, Menlo, Monaco, "Liberation Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  text-shadow: 0 0 4px rgba(255,182,66,0.16);
+  background: rgba(0,0,0,0.45);
+  user-select: none;
+}
+
+.fnv_inv_frame{
+  position: absolute;
+  width: 90vw;
+  height: 72vh;
+  left: 50%;
+  top: 10vh;
+  transform: translateX(-50%);
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 6px;
+  background: rgba(0,0,0,0.25);
+  border: 1px solid var(--pip-dim);
+  padding: 8px 14px 12px;
+  box-sizing: border-box;
+}
+
+.fnv_inv_header{
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 16px;
+}
+
+.fnv_inv_title{
+  letter-spacing: 1px;
+}
+
+.fnv_inv_tabs{
+  display: flex;
+  gap: 18px;
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+.fnv_inv_tab{
+  cursor: pointer;
+}
+
+.fnv_inv_tab_active{
+  opacity: 1;
+  text-shadow: 0 0 6px rgba(255,182,66,0.35);
+}
+
+.fnv_inv_page{
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  gap: 6px;
+  min-height: 0;
+}
+
+.fnv_inv_categories{
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.fnv_inv_category{
+  position: relative;
+  padding-bottom: 2px;
+  cursor: pointer;
+}
+
+.fnv_inv_category.active{
+  opacity: 1;
+  text-shadow: 0 0 6px rgba(255,182,66,0.3);
+}
+
+.fnv_inv_category.active::after{
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-bottom: 1px solid var(--pip);
+}
+
+.fnv_inv_body{
+  display: grid;
+  grid-template-columns: minmax(0, 40%) minmax(0, 20%) minmax(0, 40%);
+  gap: 12px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.fnv_inv_list{
+  border: 1px solid var(--pip-dim);
+  padding: 8px;
+  overflow: hidden;
+  background: rgba(0,0,0,0.25);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(0,0,0,0) 0,
+    rgba(0,0,0,0) 6px,
+    rgba(0,0,0,0.16) 7px
+  );
+}
+
+.fnv_inv_row{
+  display: grid;
+  grid-template-columns: 14px 1fr 48px 24px;
+  align-items: center;
+  height: 24px;
+  font-size: 14px;
+  padding: 0 6px;
+  opacity: 0.85;
+  cursor: pointer;
+}
+
+.fnv_inv_row.selected{
+  background: var(--pip-dimmer);
+  opacity: 1;
+}
+
+.fnv_inv_row_marker{
+  text-align: center;
+  font-size: 12px;
+}
+
+.fnv_inv_row_qty{
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.fnv_inv_row_eq{
+  text-align: center;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.fnv_inv_center{
+  border: 1px solid var(--pip-dim);
+  background: rgba(0,0,0,0.25);
+  display: flex;
+  align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(0,0,0,0) 0,
+    rgba(0,0,0,0) 6px,
+    rgba(0,0,0,0.16) 7px
+  );
 }
 
-.App-link {
-  color: #61dafb;
+.fnv_inv_center_icon img{
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  filter: var(--pip-filter);
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
+.fnv_inv_stats{
+  border: 1px solid var(--pip-dim);
+  background: rgba(0,0,0,0.25);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 15px;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(0,0,0,0) 0,
+    rgba(0,0,0,0) 6px,
+    rgba(0,0,0,0.16) 7px
+  );
+}
+
+.fnv_inv_stat{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.fnv_inv_stat_label{
+  opacity: 0.85;
+}
+
+.fnv_inv_stat_value{
+  font-variant-numeric: tabular-nums;
+}
+
+.fnv_inv_cnd_bar{
+  width: 72%;
+  height: 10px;
+  border: 1px solid var(--pip-dim);
+  background: rgba(0,0,0,0.2);
+  position: relative;
+}
+
+.fnv_inv_info{
+  margin-top: 6px;
+  font-size: 16px;
+  line-height: 1.4;
+  text-transform: none;
+  opacity: 0.95;
+}
+
+.fnv_inv_info_label{
+  font-size: 14px;
+  opacity: 0.9;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.fnv_inv_cnd_fill{
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: var(--pip);
+}
+
+.fnv_inv_footer{
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.fnv_inv_sort{
+  cursor: pointer;
+}
+
+.fnv_inv_desc{
+  border: 1px solid var(--pip-dim);
+  background: rgba(0,0,0,0.2);
+  padding: 8px;
+  display: grid;
+  grid-template-columns: 22% 1fr;
+  gap: 6px;
+  min-height: 72px;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(0,0,0,0) 0,
+    rgba(0,0,0,0) 6px,
+    rgba(0,0,0,0.16) 7px
+  );
+}
+
+.fnv_inv_desc_icon img{
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+  filter: var(--pip-filter);
+}
+
+.fnv_inv_desc_name{
+  font-size: 15px;
+  margin-bottom: 2px;
+}
+
+.fnv_inv_desc_body{
+  font-size: 12px;
+  line-height: 1.3;
+  text-transform: none;
+}
+
+.fnv_special_layout{
+  display: grid;
+  grid-template-columns: minmax(0, 35%) minmax(0, 65%);
+  gap: 14px;
+  min-height: 0;
+}
+
+.fnv_special_list{
+  border: 1px solid var(--pip-dim);
+  padding: 10px;
+  background: rgba(0,0,0,0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(0,0,0,0) 0,
+    rgba(0,0,0,0) 6px,
+    rgba(0,0,0,0.16) 7px
+  );
+}
+
+.fnv_special_row{
+  display: grid;
+  grid-template-columns: 12px 1fr 36px;
+  align-items: center;
+  height: 26px;
+  font-size: 14px;
+  padding: 0 6px;
+  cursor: pointer;
+  opacity: 0.85;
+}
+
+.fnv_special_row.selected{
+  border: 1px solid var(--pip-dim);
+  background: var(--pip-dimmer);
+  opacity: 1;
+}
+
+.fnv_special_row_marker{
+  text-align: center;
+  font-size: 12px;
+}
+
+.fnv_special_row_value{
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.fnv_special_detail{
+  border: 1px solid var(--pip-dim);
+  background: rgba(0,0,0,0.25);
+  padding: 16px 18px;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 12px;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(0,0,0,0) 0,
+    rgba(0,0,0,0) 6px,
+    rgba(0,0,0,0.16) 7px
+  );
+}
+
+.fnv_special_icon{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.fnv_special_icon img{
+  width: 220px;
+  height: 220px;
+  object-fit: contain;
+  opacity: 0.85;
+  filter: var(--pip-filter);
+}
+
+.fnv_special_desc{
+  max-width: 80%;
+  text-transform: none;
+}
+
+.fnv_special_title{
+  font-size: 18px;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.fnv_special_text{
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.fnv_special_tabs{
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  opacity: 0.8;
+  margin-top: 6px;
+}
+
+.fnv_special_tab{
+  padding: 2px 4px;
+  border: 1px solid transparent;
+}
+
+.fnv_special_tab_active{
+  border-color: var(--pip-dim);
+  opacity: 1;
+}
+
+.fnv_inv_page_stats{
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 10px;
+  min-height: 0;
+}
+
+/* Centre écran comme FNV */
+.fnv_interact{
+  position: fixed;
+  left: 50%;
+  top: 70%;            
+  transform: translateX(-50%);
+  z-index: 9997;
+
+  pointer-events: none;
+
+  color: var(--pip);
+  font-family: ui-monospace, Consolas, Menlo, Monaco, "Liberation Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  text-shadow: 0 0 2px rgba(255,182,66,0.18);
+
+  text-transform: none;
+
+  animation: fnv_prompt_fade 0.08s ease-out;
+
+  /* pas de fond moderne, juste lisible */
+  background: transparent;
+}
+
+@keyframes fnv_prompt_fade{
+  from{ opacity: 0; transform: translateX(-50%) translateY(2px); }
+  to{ opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* Ligne [E] INTERAGIR */
+.fnv_interact_line1{
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.fnv_interact_key{
+  opacity: 0.95;
+}
+
+.fnv_interact_action{
+  opacity: 0.95;
+}
+
+/* Nom PNJ en dessous */
+.fnv_interact_name{
+  margin-top: 4px;
+  text-align: center;
+  font-size: 20px;
+  line-height: 1;
+  opacity: 0.9;
+  /* FNV vibe : guillemets */
+}
+
+/* ===================== */
+/* Réticule              */
+/* ===================== */
+.fnv_reticle{
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+
+  z-index: 9996;
+  pointer-events: none;
+
+  color: var(--pip);
+  font-family: ui-monospace, Consolas, Menlo, Monaco, "Liberation Mono", monospace;
+  font-size: 18px;
+  line-height: 1;
+  letter-spacing: 0.2px;
+
+  text-shadow: 0 0 2px rgba(255,182,66,0.18);
+  opacity: 0.95;
+}
+
+.fnv_reticle{
+  transition: opacity 80ms linear;
+}
+.fnv_reticle.fnv_hidden{
+  opacity: 0;
+}
+
+/* ===================== */
+/* Container Loot Panel  */
+/* ===================== */
+.fnv_container{
+  position: fixed;
+  right: clamp(24px, 6vw, 90px);
+  top: clamp(24px, 6vw, 90px);
+  z-index: 9998;
+  pointer-events: none;
+  animation: fnv_container_in 120ms ease-out;
+}
+
+.fnv_container_frame{
+  width: clamp(280px, 32vw, 420px);
+  padding: 10px 12px;
+  background: rgba(45, 28, 12, 0.75);
+  border: 1px solid rgba(255,182,66,0.35);
+  border-radius: 2px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+  color: var(--pip);
+  font-family: "Roboto Condensed", "Arial Narrow", Arial, sans-serif;
+  letter-spacing: 0.3px;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.6);
+}
+
+.fnv_container_header{
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.fnv_container_list{
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 260px;
+  overflow: auto;
+  scrollbar-width: none;
+}
+
+.fnv_container_list::-webkit-scrollbar{
+  width: 0;
+  height: 0;
+}
+
+.fnv_container_row{
+  display: grid;
+  grid-template-columns: 24px 1fr 90px;
+  align-items: center;
+  height: 24px;
+  padding: 2px 6px;
+  font-size: 15px;
+  font-weight: 500;
+  border-radius: 2px;
+}
+
+.fnv_container_row_icon{
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fnv_container_row_icon img{
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  filter: var(--pip-filter);
+}
+
+.fnv_container_row_name{
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.fnv_container_row_cnd{
+  height: 8px;
+  background: rgba(0,0,0,0.35);
+  justify-self: end;
+  width: 90px;
+}
+
+.fnv_container_row_cnd_fill{
+  height: 100%;
+  width: 0%;
+  background: #d9a63a;
+}
+
+.fnv_container_row.selected{
+  background: #d9a63a;
+  color: #2a1a08;
+}
+
+.fnv_container_row.selected .fnv_container_row_icon img{
+  filter: brightness(0) saturate(100%) invert(14%) sepia(14%) saturate(1539%) hue-rotate(350deg) brightness(90%) contrast(92%);
+}
+
+.fnv_container_row.selected .fnv_container_row_cnd_fill{
+  background: #2a1a08;
+}
+
+.fnv_container_footer{
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+@keyframes fnv_container_in{
+  from{ opacity: 0; transform: translateY(-4px); }
+  to{ opacity: 1; transform: translateY(0); }
+}
+
+/* ===================== */
+/* Container Transfer UI */
+/* ===================== */
+.fnv_transfer{
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  pointer-events: none;
+  color: var(--pip);
+  font-family: "Roboto Condensed", "Arial Narrow", Arial, sans-serif;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.6);
+  letter-spacing: 0.3px;
+}
+
+.fnv_transfer_frame{
+  position: absolute;
+  inset: 48px 64px;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 18px;
+}
+
+.fnv_transfer_panels{
+  display: grid;
+  grid-template-columns: 1fr 90px 1fr;
+  gap: 16px;
+  min-height: 0;
+}
+
+.fnv_transfer_panel{
+  position: relative;
+  border: 1px solid rgba(227,181,74,0.55);
+  background: rgba(0,0,0,0.35);
+  padding: 12px 12px 18px;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.fnv_transfer_header{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.fnv_transfer_title::before{
+  content: "◀ ";
+  opacity: 0.8;
+}
+
+.fnv_transfer_title::after{
+  content: " ▶";
+  opacity: 0.8;
+}
+
+.fnv_transfer_rule{
+  height: 1px;
+  background: rgba(227,181,74,0.55);
+  margin: 8px 0 6px;
+}
+
+.fnv_transfer_list_viewport{
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+}
+
+.fnv_transfer_list_viewport::-webkit-scrollbar{
+  width: 0;
+  height: 0;
+}
+
+.fnv_transfer_list_viewport{
+  scrollbar-width: none;
+}
+
+.fnv_transfer_list{
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+  padding-left: 10px;
+}
+
+.fnv_transfer_row{
+  display: block;
+  padding: 6px 10px;
+  font-size: 18px;
+  line-height: 1.2;
+  text-transform: none;
+  height: 28px;
+}
+
+.fnv_transfer_row.selected{
+  outline: 2px solid rgba(227,181,74,0.85);
+  outline-offset: -2px;
+}
+
+.fnv_transfer_scroll{
+  position: absolute;
+  left: 6px;
+  top: 46px;
+  bottom: 14px;
+  width: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: rgba(227,181,74,0.75);
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.fnv_transfer_scroll_rail{
+  flex: 1;
+  width: 2px;
+  background: rgba(227,181,74,0.35);
+  margin: 4px 0;
+}
+
+.fnv_transfer_scroll_up,
+.fnv_transfer_scroll_down{
+  opacity: 0.75;
+}
+
+.fnv_transfer_chevron{
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fnv_transfer_chevron_line{
+  position: absolute;
+  width: 50px;
+  height: 4px;
+  background: rgba(227,181,74,0.8);
+  transform-origin: left center;
+}
+
+.fnv_transfer_chevron_line.a{
+  transform: rotate(30deg);
+}
+
+.fnv_transfer_chevron_line.b{
+  transform: rotate(-30deg);
+}
+
+.fnv_transfer_details{
+  border: 1px solid rgba(227,181,74,0.55);
+  background: rgba(0,0,0,0.35);
+  display: grid;
+  grid-template-columns: 180px 1fr 180px;
+  align-items: end;
+  padding: 14px;
+  min-height: 220px;
+}
+
+.fnv_transfer_details_icon{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+}
+
+.fnv_transfer_details_icon img{
+  width: 140px;
+  height: 140px;
+  object-fit: contain;
+  filter: var(--pip-filter);
+}
+
+.fnv_transfer_stats_grid{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 18px;
+}
+
+.fnv_transfer_stats_row{
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px 18px;
+  border-bottom: 1px solid rgba(227,181,74,0.55);
+  padding-bottom: 6px;
+}
+
+.fnv_transfer_stat_label{
+  opacity: 0.8;
+}
+
+.fnv_transfer_stat{
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+  min-height: 26px;
+}
+
+.fnv_transfer_stat.wide{
+  grid-template-columns: 110px 1fr;
+}
+
+.fnv_transfer_stat_value{
+  justify-self: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.fnv_transfer_cnd_bar{
+  height: 10px;
+  width: 140px;
+  background: rgba(0,0,0,0.25);
+}
+
+.fnv_transfer_cnd_fill{
+  height: 100%;
+  width: 0%;
+  background: #d9a63a;
+}
+
+.fnv_transfer_details_controls{
+  text-align: right;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.fnv_transfer_item_name{
+  font-size: 20px;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+@media (max-width: 900px){
+  .fnv_transfer_frame{
+    inset: 32px 24px;
   }
-  to {
-    transform: rotate(360deg);
+  .fnv_transfer_details{
+    grid-template-columns: 140px 1fr 140px;
   }
 }
+
+/* ===================== */
+/* Dialogue FNV Panel    */
+/* ===================== */
+
+.fnv_dialog{
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 10%;              /* proche FNV : panneau au bas, pas collé */
+  z-index: 9999;
+  pointer-events: auto;     /* panel "visuel"; on capte via JS keydown */
+}
+
+/* Panel central (bas-centre) */
+.fnv_dialog_panel{
+  width: 760px;
+  max-width: calc(100vw - 40px);
+  margin: 0 auto;
+
+  position: relative;
+  padding: 12px 14px;
+  pointer-events: auto;
+
+  /* cadre fin FNV */
+  border: 2px solid var(--pip);
+  background: rgba(0,0,0,0.25);
+  box-shadow: none;
+
+  filter: drop-shadow(0 0 2px rgba(255,182,66,0.20));
+}
+
+/* NPC name à droite (comme FNV) */
+.fnv_dialog_npcname{
+  position: absolute;
+  right: 14px;
+  top: -26px;
+
+  color: var(--pip);
+  font-family: ui-monospace, Consolas, Menlo, Monaco, "Liberation Mono", monospace;
+  font-size: 18px;
+  line-height: 1;
+  letter-spacing: 0.6px;
+
+  text-shadow: 0 0 2px rgba(255,182,66,0.18);
+
+  /* IMPORTANT : pas de uppercase forcé */
+  text-transform: none;
+}
+
+/* Ligne PNJ optionnelle au-dessus des options */
+.fnv_dialog_npcline{
+  margin-bottom: 10px;
+
+  color: var(--pip);
+  opacity: 0.95;
+
+  font-family: ui-monospace, Consolas, Menlo, Monaco, "Liberation Mono", monospace;
+  font-size: 16px;
+  line-height: 1.2;
+  letter-spacing: 0.4px;
+
+  text-transform: none;
+}
+
+/* Liste options */
+.fnv_dialog_options{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+/* Une option */
+.fnv_dialog_option{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 6px 8px;
+
+  color: var(--pip);
+  font-family: ui-monospace, Consolas, Menlo, Monaco, "Liberation Mono", monospace;
+  font-size: 18px;
+  line-height: 1.1;
+  letter-spacing: 0.4px;
+
+  text-transform: none;
+
+  /* pas de boutons modernes */
+  background: transparent;
+  border: 1px solid transparent;
+
+  opacity: 0.95;
+  pointer-events: auto;
+  cursor: default;
+}
+
+/* Petit chevron à gauche comme FNV */
+.fnv_dialog_marker{
+  width: 14px;
+  text-align: center;
+  opacity: 0.9;
+  align-self: center;
+}
+
+/* Surbrillance sélection */
+.fnv_dialog_option.selected{
+  border-color: rgba(255,182,66,0.65);
+  background: rgba(255,182,66,0.08);
+}
+
+.fnv_dialog_option:hover{
+  border-color: rgba(255,182,66,0.45);
+  background: rgba(255,182,66,0.06);
+}
+
+/* Option déjà utilisée (plus sombre) */
+.fnv_dialog_option.used{
+  opacity: 0.60;
+}
+
+/* Option disabled (non selectable) */
+.fnv_dialog_option.disabled{
+  opacity: 0.30;
+}
+
+.fnv_dialog_option.disabled:hover{
+  border-color: transparent;
+  background: transparent;
+}
+
+/* Indicateur "sortie" optionnel */
+.fnv_dialog_action{
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0.85;
+}
+
+.fnv_dialog_action_icon{
+  width: 18px;
+  height: 18px;
+  display: block;
+  stroke: var(--pip);
+  stroke-width: 2;
+  fill: none;
+}
+
+/* Micro apparition (FNV-like) */
+.fnv_dialog.fnv_dialog_open{
+  animation: fnv_dialog_in 120ms ease-out;
+}
+
+@keyframes fnv_dialog_in{
+  from{ opacity: 0; transform: translateY(6px); }
+  to{ opacity: 1; transform: translateY(0); }
+}
+
+/* ===================== */
+/* Shop FNV Panel        */
+/* ===================== */
+
+.fnv_shop{
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+
+  display: block;
+  pointer-events: auto;
+
+  color: var(--pip);
+  font-family: ui-monospace, Consolas, Menlo, Monaco, "Liberation Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  text-shadow: 0 0 4px rgba(255,182,66,0.16);
+
+  background: rgba(0,0,0,0.25);
+}
+
+.fnv_shop_frame{
+  position: absolute;
+  width: 78vw;
+  height: 62vh;
+  left: 50%;
+  top: 16vh;
+  transform: translateX(-50%);
+}
+
+.fnv_shop_panel{
+  position: absolute;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid var(--pip-dim);
+  padding: 10px 12px 12px;
+  box-sizing: border-box;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(0,0,0,0) 0,
+    rgba(0,0,0,0) 6px,
+    rgba(0,0,0,0.18) 7px
+  );
+}
+
+.fnv_shop_panel_left{
+  left: 0;
+  top: 0;
+  width: 38%;
+  height: 58%;
+}
+
+.fnv_shop_panel_right{
+  right: 0;
+  top: 0;
+  width: 38%;
+  height: 58%;
+}
+
+.fnv_shop_corner{
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  opacity: 0.9;
+}
+
+.fnv_shop_corner.tl{
+  left: -1px;
+  top: -1px;
+  border-left: 2px solid var(--pip);
+  border-top: 2px solid var(--pip);
+}
+
+.fnv_shop_corner.tr{
+  right: -1px;
+  top: -1px;
+  border-right: 2px solid var(--pip);
+  border-top: 2px solid var(--pip);
+}
+
+.fnv_shop_corner.bl{
+  left: -1px;
+  bottom: -1px;
+  border-left: 2px solid var(--pip);
+  border-bottom: 2px solid var(--pip);
+}
+
+.fnv_shop_corner.br{
+  right: -1px;
+  bottom: -1px;
+  border-right: 2px solid var(--pip);
+  border-bottom: 2px solid var(--pip);
+}
+
+.fnv_shop_header{
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.fnv_shop_title{
+  opacity: 0.95;
+}
+
+.fnv_shop_caps{
+  display: inline-flex;
+  gap: 8px;
+  opacity: 0.9;
+  align-items: center;
+}
+
+.fnv_shop_caps_icon{
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  filter: var(--pip-filter);
+}
+
+.fnv_shop_caps_label{
+  opacity: 0.85;
+}
+
+.fnv_shop_caps_value{
+  font-variant-numeric: tabular-nums;
+}
+
+.fnv_shop_list{
+  margin-top: 6px;
+  height: calc(100% - 26px);
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+.fnv_shop_row{
+  display: grid;
+  grid-template-columns: 16px 1fr 56px 64px;
+  align-items: center;
+  height: 24px;
+  padding: 0 6px 0 6px;
+  font-size: 14px;
+  opacity: 0.92;
+  cursor: default;
+  pointer-events: auto;
+}
+
+.fnv_shop_row_mark{
+  width: 16px;
+  text-align: center;
+  opacity: 0.95;
+  font-size: 12px;
+}
+
+.fnv_shop_row_name{
+  text-transform: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fnv_shop_row_selqty{
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}
+
+.fnv_shop_row_val{
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.fnv_shop_row.used{
+  opacity: 0.6;
+}
+
+.fnv_shop_row.disabled{
+  opacity: 0.3;
+}
+
+.fnv_shop_row.picked{
+  background: rgba(255,182,66,0.08);
+}
+
+.fnv_shop_row.selected{
+  background: var(--pip-dimmer);
+  color: rgba(255,214,140,0.95);
+}
+
+.fnv_shop_center{
+  position: absolute;
+  left: 50%;
+  top: 8%;
+  width: 10%;
+  height: 42%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.fnv_shop_arrow_block{
+  width: 100%;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.fnv_shop_arrow_amount{
+  font-size: 18px;
+  color: rgba(255,214,140,0.95);
+  line-height: 1.1;
+}
+
+.fnv_shop_arrow_label{
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.fnv_shop_arrow_graphic{
+  margin: 6px auto 0;
+  width: 80%;
+  height: 10px;
+  position: relative;
+}
+
+.fnv_shop_arrow_graphic::before{
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: 2px solid var(--pip);
+  transform: translateY(-50%);
+  opacity: 0.9;
+}
+
+.fnv_shop_arrow_right::after{
+  content: "";
+  position: absolute;
+  right: -2px;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-left: 8px solid var(--pip);
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  transform: translateY(-50%);
+}
+
+.fnv_shop_arrow_left::after{
+  content: "";
+  position: absolute;
+  left: -2px;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-right: 8px solid var(--pip);
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  transform: translateY(-50%);
+}
+
+.fnv_shop_confirm{
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  text-transform: none;
+  text-align: left;
+  animation: fnv_shop_confirm_in 180ms steps(3, end);
+  text-shadow: 0 0 6px rgba(255,182,66,0.35);
+  min-width: 360px;
+  max-width: 420px;
+}
+
+.fnv_shop_confirm_icon{
+  width: 104px;
+  height: 104px;
+  object-fit: contain;
+  filter: var(--pip-filter) drop-shadow(0 0 6px rgba(255,182,66,0.35));
+}
+
+.fnv_shop_confirm_text{
+  line-height: 1.2;
+  opacity: 0.95;
+  max-width: 260px;
+}
+
+@keyframes fnv_shop_confirm_in{
+  0%{ opacity: 0; transform: translateY(6px); filter: brightness(0.85); }
+  60%{ opacity: 1; transform: translateY(0); filter: brightness(1); }
+  80%{ opacity: 0.65; }
+  100%{ opacity: 1; }
+}
+
+.fnv_shop_itemcard{
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 34%;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid var(--pip-dim);
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: 18% 50% 32%;
+  gap: 10px;
+  box-sizing: border-box;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(0,0,0,0) 0,
+    rgba(0,0,0,0) 6px,
+    rgba(0,0,0,0.18) 7px
+  );
+}
+
+.fnv_shop_item_icon{
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 8px;
+  min-height: 100%;
+}
+
+.fnv_shop_item_icon img{
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  filter: var(--pip-filter);
+}
+
+.fnv_shop_item_info{
+  display: flex;
+  flex-direction: column;
+}
+
+.fnv_shop_item_name{
+  font-size: 18px;
+  color: rgba(255,214,140,0.95);
+  margin-bottom: 8px;
+}
+
+.fnv_shop_item_stats{
+  display: flex;
+  gap: 18px;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.fnv_shop_stat_label{
+  opacity: 0.85;
+  margin-right: 4px;
+}
+
+.fnv_shop_stat_value{
+  font-variant-numeric: tabular-nums;
+}
+
+.fnv_shop_item_desc{
+  font-size: 14px;
+  opacity: 0.95;
+  align-self: center;
+  justify-self: start;
+  text-align: left;
+  padding-left: 0;
+  line-height: 1.3;
+  text-transform: none;
+}
+
+.fnv_shop_actions{
+  position: absolute;
+  right: 0;
+  top: 58%;
+  height: 8%;
+  text-align: left;
+  font-size: 13px;
+  line-height: 1.6;
+  padding-right: 6px;
+  opacity: 0.95;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.fnv_shop_action{
+  white-space: nowrap;
+}
+
+.fnv_shop_qty{
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.35);
+  pointer-events: auto;
+}
+
+.fnv_shop_qty_panel{
+  width: 320px;
+  padding: 12px 14px;
+  border: 1px solid var(--pip);
+  background: rgba(0,0,0,0.65);
+  text-align: center;
+}
+
+.fnv_shop_qty_title{
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.fnv_shop_qty_value{
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 8px;
+}
+
+.fnv_shop_qty_range{
+  width: 100%;
+  margin: 6px 0 10px;
+  --qty-tick-gap: 10px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  height: 14px;
+}
+
+.fnv_shop_qty_range::-webkit-slider-runnable-track{
+  height: 6px;
+  border: 1px solid var(--pip-dim);
+  background-image: repeating-linear-gradient(
+    to right,
+    transparent 0,
+    transparent calc(var(--qty-tick-gap) - 1px),
+    rgba(255,182,66,0.65) calc(var(--qty-tick-gap) - 1px),
+    rgba(255,182,66,0.65) var(--qty-tick-gap)
+  );
+}
+
+.fnv_shop_qty_range::-webkit-slider-thumb{
+  -webkit-appearance: none;
+  width: 8px;
+  height: 16px;
+  background: var(--pip);
+  border: 1px solid var(--pip);
+  margin-top: -6px;
+}
+
+.fnv_shop_qty_range::-moz-range-track{
+  height: 6px;
+  border: 1px solid var(--pip-dim);
+  background-image: repeating-linear-gradient(
+    to right,
+    transparent 0,
+    transparent calc(var(--qty-tick-gap) - 1px),
+    rgba(255,182,66,0.65) calc(var(--qty-tick-gap) - 1px),
+    rgba(255,182,66,0.65) var(--qty-tick-gap)
+  );
+}
+
+.fnv_shop_qty_range::-moz-range-thumb{
+  width: 8px;
+  height: 16px;
+  background: var(--pip);
+  border: 1px solid var(--pip);
+  border-radius: 0;
+}
+
+.fnv_shop_qty_buttons,
+.fnv_shop_qty_actions{
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-top: 6px;
+}
+
+.fnv_shop_qty_btn{
+  border: 1px solid var(--pip-dim);
+  background: transparent;
+  color: var(--pip);
+  font-family: inherit;
+  text-transform: uppercase;
+  font-size: 12px;
+  padding: 4px 8px;
+  cursor: default;
+}
+
+.fnv_shop_qty_btn_primary{
+  border-color: var(--pip);
+}
+/* ===================== */
+/* Admin Console         */
+/* ===================== */
+.fnv_admin{
+  position: fixed;
+  left: 50%;
+  bottom: 8%;
+  transform: translateX(-50%);
+  width: 520px;
+  z-index: 9999;
+
+  background: rgba(0,0,0,0.88);
+  border: 1px solid rgba(255,182,66,0.55);
+  box-shadow: none;
+  font-family: ui-monospace, Consolas, Menlo, Monaco, "Liberation Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--pip);
+}
+
+.fnv_admin_header{
+  display:flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255,182,66,0.25);
+  font-size: 12px;
+  opacity: 0.95;
+}
+
+.fnv_admin_hint{
+  opacity: 0.75;
+  font-size: 11px;
+}
+
+.fnv_admin_log{
+  max-height: 140px;
+  overflow: hidden;
+  padding: 6px 10px;
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.fnv_admin_line{
+  margin: 2px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fnv_admin_input{
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px;
+  background: rgba(0,0,0,0.95);
+  color: var(--pip);
+  border: none;
+  border-top: 1px solid rgba(255,182,66,0.25);
+  outline: none;
+  font-size: 14px;
+}
+
+
+/* Notifs HUD : top-right (sous AP) */
+#hud_notifs{
+  position: fixed;
+  top: 22px;
+  right: 18px;
+  width: 420px;
+  z-index: 9998;
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+
+  pointer-events: none;
+}
+
+/* Une notif */
+.notif{
+  max-width: 100%;
+  padding: 6px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  border: 1px solid rgba(255,182,66,0.55);
+  background: rgba(0,0,0,0.85);
+  color: var(--pip);
+
+  font-family: ui-monospace, Consolas, Menlo, Monaco, "Liberation Mono", monospace;
+  font-size: 13px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+
+  opacity: 0.95;
+}
+
+.notif_gif{
+  width: 28px;
+  height: 28px;
+  image-rendering: pixelated;
+}
+
+.notif_text{
+  line-height: 1;
+}
+
