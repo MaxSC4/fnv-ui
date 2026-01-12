@@ -21,14 +21,34 @@ import Events from "./Events";
   const elCompassLabels = () => document.getElementById("compass_labels");
 
   // Right HUD (AP/CND/Ammo)
-  const elApFillWrap     = () => document.getElementById("ap_fill"); // legacy (no longer used)
-  const elApBar          = () => document.getElementById("ap_bar");
-  const elApTicksClip = () => document.getElementById("apClipRect");
-  const elAmmoText       = () => document.getElementById("ammo_text");
-  const elCndArmorFill   = () => document.getElementById("cnd_armor_fill");
-  const elCndWeaponFill  = () => document.getElementById("cnd_weapon_fill");
-  const elCndArmorWrap   = () => document.getElementById("cnd_armor_wrap");
-  const elCndWeaponWrap  = () => document.getElementById("cnd_weapon_wrap");
+  const elRightSubBar    = () => document.getElementById("fnv_right_sub_bar");
+  const getRightSubPrefix = () => elRightSubBar()?.dataset?.prefix || "";
+  const queryRightSubId = (id) => {
+    const root = elRightSubBar();
+    if (!root) return null;
+    const prefix = getRightSubPrefix();
+    const targetId = prefix ? `${prefix}__${id}` : id;
+    return root.querySelector(`#${targetId}`);
+  };
+  const queryRightSubAll = (selector) => {
+    const root = elRightSubBar();
+    if (!root) return [];
+    const prefix = getRightSubPrefix();
+    if (!prefix) return root.querySelectorAll(selector);
+    const scoped = selector.replace(/#([A-Za-z0-9_-]+)/g, (_, id) => `#${prefix}__${id}`);
+    return root.querySelectorAll(scoped);
+  };
+  const elApTicksClip    = () => queryRightSubId("rect60");
+  const elAmmoText       = () => queryRightSubId("text45");
+  const elAmmoTextSpan   = () => queryRightSubId("tspan45");
+  const elCndArmorFill   = () => queryRightSubId("rect15");
+  const elCndArmorEmpty  = () => queryRightSubId("rect14");
+  const elCndWeaponFill  = () => queryRightSubId("rect37");
+  const elCndWeaponEmpty = () => queryRightSubId("rect36");
+  const elMicOpen        = () => document.getElementById("mic_open");
+  const elMicOpenGlow    = () => document.getElementById("mic_open_glow");
+  const elMicClosed      = () => document.getElementById("mic_closed");
+  const elMicClosedGlow  = () => document.getElementById("mic_closed_glow");
 
   // Réticule
   const elReticle = () => document.getElementById("fnv_reticle");
@@ -66,7 +86,103 @@ import Events from "./Events";
   function setTicksClip(rect, pct) {
     if (!rect) return;
     const safe = clamp(pct, 0, 100) / 100;
-    rect.setAttribute("width", safe.toFixed(4));
+    rect.setAttribute("width", `${(safe * 100).toFixed(2)}%`);
+  }
+
+  function setRectFillWidth(rect, pct) {
+    if (!rect) return;
+    if (!rect.dataset.baseWidth) {
+      const base = parseFloat(rect.getAttribute("width") || "0");
+      rect.dataset.baseWidth = Number.isFinite(base) ? String(base) : "0";
+    }
+    const base = parseFloat(rect.dataset.baseWidth || "0");
+    const safe = clamp(pct, 0, 100) / 100;
+    rect.setAttribute("width", (base * safe).toFixed(3));
+  }
+
+  function setCondVisible(visible, ...els) {
+    els.forEach((el) => {
+      if (!el) return;
+      el.style.display = visible ? "inline" : "none";
+    });
+  }
+
+  function setCondCritical(el, critical) {
+    if (!el) return;
+    el.classList.toggle("cond_critical", !!critical);
+  }
+
+  const apTickState = {
+    current: null,
+    target: null,
+    timer: null,
+    tickCount: null,
+    baseWidth: null
+  };
+
+  function getApTickCount() {
+    if (apTickState.tickCount != null) return apTickState.tickCount;
+    const ticks = queryRightSubAll("#hp_ticks_fill rect");
+    const count = ticks ? ticks.length : 0;
+    if (count > 0) apTickState.tickCount = count;
+    return count;
+  }
+
+  function getApClipBaseWidth() {
+    if (apTickState.baseWidth != null) return apTickState.baseWidth;
+    const rect = elApTicksClip();
+    if (!rect) return null;
+    const base = parseFloat(rect.getAttribute("width") || "0");
+    const safe = Number.isFinite(base) ? base : 0;
+    if (safe > 0) apTickState.baseWidth = safe;
+    return safe;
+  }
+
+  function applyApTicks(count) {
+    const rect = elApTicksClip();
+    const tickCount = getApTickCount();
+    const baseWidth = getApClipBaseWidth();
+    if (!rect || !tickCount || baseWidth == null) return;
+    const safeCount = clamp(count, 0, tickCount);
+    const width = (baseWidth * safeCount) / tickCount;
+    rect.setAttribute("width", width.toFixed(4));
+  }
+
+  function animateApTicksTo(target) {
+    const tickCount = getApTickCount();
+    if (!tickCount) return;
+    const safeTarget = clamp(target, 0, tickCount);
+    if (apTickState.current == null) {
+      apTickState.current = safeTarget;
+      applyApTicks(safeTarget);
+      return;
+    }
+    apTickState.target = safeTarget;
+    if (apTickState.timer) return;
+    apTickState.timer = window.setInterval(() => {
+      if (apTickState.current === apTickState.target) {
+        window.clearInterval(apTickState.timer);
+        apTickState.timer = null;
+        return;
+      }
+      const dir = apTickState.current < apTickState.target ? 1 : -1;
+      apTickState.current += dir;
+      applyApTicks(apTickState.current);
+    }, 45);
+  }
+
+  function setMicState(open) {
+    const showOpen = !!open;
+    const openEls = [elMicOpen(), elMicOpenGlow()];
+    const closedEls = [elMicClosed(), elMicClosedGlow()];
+    openEls.forEach((el) => {
+      if (!el) return;
+      el.style.display = showOpen ? "inline" : "none";
+    });
+    closedEls.forEach((el) => {
+      if (!el) return;
+      el.style.display = showOpen ? "none" : "inline";
+    });
   }
 
   function normDeg(d) {
@@ -112,62 +228,80 @@ import Events from "./Events";
     // -------- AP --------
     const apNow = Number(state?.ap?.now ?? 0);
     const apMax = Number(state?.ap?.max ?? 0);
-    const apFill = elApFillWrap();
-    const apBar = elApBar();
-    const apPct = apMax > 0 ? (apNow / apMax) * 100 : 0;
-    if (apFill) apFill.style.width = "100%";
-    setTicksClip(elApTicksClip(), apPct);
-    if (apBar) apBar.classList.toggle("ap_low", apMax > 0 && apPct < 20);
+    const apPct = apMax > 0 ? (apNow / apMax) * 100 : 100;
+    const apTickCount = getApTickCount();
+    const apTargetTicks = apTickCount ? Math.round((apPct / 100) * apTickCount) : 0;
+    animateApTicksTo(apTargetTicks);
+    const rightSub = elRightSubBar();
+    if (rightSub) rightSub.classList.toggle("ap_low", apMax > 0 && apPct < 20);
 
     // -------- CND (placeholder) --------
     // Future contract:
     // state.cnd.armor_pct / state.cnd.weapon_pct in [0..100]
-    // state.equip.armor / state.equip.weapon truthy when equipped
-    const armorEquipped = !!state?.equip?.armor;
+    // state.equip.armor_body / state.equip.weapon truthy when equipped
+    const armorEquipped = !!(state?.equip?.armor || state?.equip?.armor_body);
     const weaponEquipped = !!state?.equip?.weapon;
 
     const armorPct = state?.cnd?.armor_pct;
     const weaponPct = state?.cnd?.weapon_pct;
 
-    const armorWrap = elCndArmorWrap();
-    const weaponWrap = elCndWeaponWrap();
+    const armorVisible = !(!armorEquipped && (armorPct == null));
+    const weaponVisible = !(!weaponEquipped && (weaponPct == null));
 
-    if (!armorEquipped && (armorPct == null)) {
-      armorWrap?.classList.add("fnv_hidden");
-    } else {
-      armorWrap?.classList.remove("fnv_hidden");
+    setCondVisible(
+      armorVisible,
+      elCndArmorFill(),
+      elCndArmorEmpty()
+    );
+    setCondVisible(
+      weaponVisible,
+      elCndWeaponFill(),
+      elCndWeaponEmpty()
+    );
+
+    if (armorVisible) {
       const pct = Number(armorPct ?? 100);
-      const fill = elCndArmorFill();
-      if (fill) fill.style.width = clamp(pct, 0, 100) + "%";
+      setRectFillWidth(elCndArmorFill(), pct);
+      setCondCritical(elCndArmorFill(), pct < 10);
     }
 
-    if (!weaponEquipped && (weaponPct == null)) {
-      weaponWrap?.classList.add("fnv_hidden");
-    } else {
-      weaponWrap?.classList.remove("fnv_hidden");
+    if (weaponVisible) {
       const pct = Number(weaponPct ?? 100);
-      const fill = elCndWeaponFill();
-      if (fill) fill.style.width = clamp(pct, 0, 100) + "%";
+      setRectFillWidth(elCndWeaponFill(), pct);
+      setCondCritical(elCndWeaponFill(), pct < 10);
     }
+    if (!armorVisible) setCondCritical(elCndArmorFill(), false);
+    if (!weaponVisible) setCondCritical(elCndWeaponFill(), false);
 
     // -------- Ammo (placeholder) --------
     const ammoNow = state?.ammo?.now;
     const ammoReserve = state?.ammo?.reserve;
     const ammoEl = elAmmoText();
+    const ammoSpanEl = elAmmoTextSpan();
+    const ammoText =
+      (ammoNow == null || ammoReserve == null)
+        ? "15/532"
+        : `${Math.floor(Number(ammoNow))}/${Math.floor(Number(ammoReserve))}`;
+    if (ammoSpanEl) ammoSpanEl.textContent = ammoText;
     if (ammoEl) {
-      if (ammoNow == null || ammoReserve == null) {
-        ammoEl.textContent = "12/532";
-      } else {
-        ammoEl.textContent = `${Math.floor(Number(ammoNow))}/${Math.floor(Number(ammoReserve))}`;
-      }
+      ammoEl.setAttribute("text-anchor", "end");
+      ammoEl.setAttribute("dominant-baseline", "middle");
+      if (!ammoSpanEl) ammoEl.textContent = ammoText;
     }
 
     // -------- Money --------
     const capsEl = elCaps();
     if (capsEl) capsEl.textContent = Math.floor(Number(state?.money?.caps ?? 0));
 
+    const micOpen = !!(state?.voice?.talking ?? state?.voice?.open ?? state?.mic?.open);
+    setMicState(micOpen);
+
     updateReticleState();
   }
+
+  window.addEventListener("FNV:RightSubBarReady", () => {
+    if (lastHudState) setState(lastHudState);
+  });
 
   /* ===================== */
   /* Notifications         */
@@ -1312,20 +1446,20 @@ function ensureUiFocus() {
     };
     ensureCompassReady();
 
-    if (typeof window.Events === "undefined") {
       window.setTimeout(() => {
         if (!stateReceived) {
           setState({
             hp: 100,
             hp_max: 100,
-            ammo: { now: 12, reserve: 532 },
+            ap: { now: 100, max: 100 },
+            ammo: { now: 15, reserve: 532 },
             money: { caps: 0 },
             equip: { armor: true, weapon: true },
             cnd: { armor_pct: 100, weapon_pct: 100 },
           });
         }
       }, 50);
-    }
+
 
   }
 

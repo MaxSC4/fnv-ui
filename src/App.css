@@ -3,15 +3,21 @@
   --pip-dim: rgba(255,182,66,0.25);
   --pip-dimmer: rgba(255,182,66,0.12);
   --pip-green: #00ff66;
+  --pip-dark1: color-mix(in srgb, var(--pip) 70%, black);
+  --pip-dark2: color-mix(in srgb, var(--pip) 45%, black);
+  --pip-glow: color-mix(in srgb, var(--pip) 40%, transparent);
   --pip-filter: brightness(0) saturate(100%) invert(82%) sepia(62%) saturate(510%) hue-rotate(353deg) brightness(102%) contrast(102%);
   --pip-green-filter: brightness(0) saturate(100%) invert(66%) sepia(62%) saturate(523%) hue-rotate(79deg) brightness(96%) contrast(103%);
   --pip-red: #ff3b3b;
   --bg: rgba(0,0,0,0.0);
   --panel: rgba(0,0,0,0.0);
   --compass-color: var(--pip);
-  --right-box-h: 40px;
-  --right-box-gap: 8px;
-  --mic-box-w: 48px;
+}
+
+@font-face{
+  font-family: "Monofonto";
+  src: url("./fonts/monofonto.otf") format("opentype");
+  font-display: swap;
 }
 
 html, body, #root, .fnv_root{
@@ -139,28 +145,6 @@ body{
   color: var(--pip);
 }
 
-.fnv_ap_bar{
-  position: relative;
-  width: 100%;
-  height: 80px;
-}
-
-.fnv_ap_svg{
-  display: block;
-  width: 100%;
-  height: 100%;
-  color: var(--pip);
-}
-
-#ap_fill{
-  transition: width 140ms linear;
-  left: auto;
-  right: 0;
-  transform: scaleX(-1);
-  transform-origin: center;
-}
-
-
 #hp_fill{
   transition: width 140ms linear;
   left: 0;
@@ -182,11 +166,7 @@ body{
   100%{ opacity: 1; }
 }
 
-#ap_ticks_fill{
-  color: var(--pip);
-}
-
-#ap_bar.ap_low #ap_ticks_fill{
+#fnv_right_sub_bar.ap_low #hp_ticks_fill{
   color: var(--pip-red);
 }
 
@@ -354,18 +334,19 @@ body{
 }
 
 
-/* Right block position */
+/* Right HUD position: tweak --hudRight/--hudBottom (margins) and --pip (color) */
 #hud_right_fnv{
   position: fixed;
-  right: 24px;
-  bottom: 22px;
-  width: min(520px, calc(100vw - 24px)); /* même largeur que HP si tu veux symétrie */
+  right: var(--hudRight, 24px);
+  bottom: var(--hudBottom, 24px);
+  width: min(520px, calc(100vw - 24px));
   color: var(--pip);
   font-family: ui-monospace, Consolas, Menlo, Monaco, "Liberation Mono", monospace;
   text-transform: uppercase;
   letter-spacing: 0.6px;
   text-shadow: 0 0 2px rgba(255,182,66,0.18);
   text-align: left;
+  pointer-events: none;
 }
 
 /* Align top line on right */
@@ -383,177 +364,65 @@ body{
   border-top: none;
 }
 
-
-
-
-/* Row holding CND + Ammo */
-.fnv_right_row{
-  margin-top: 2px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--right-box-gap);
-}
-
-
-
-/* ===================== */
-/* CND box               */
-/* ===================== */
-
-.fnv_cnd_box{
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-top: 4px;
-  padding-right: 10px;
-  padding-bottom: 4px;
-  flex: 1 1 0;
-  box-sizing: border-box;
-  height: var(--right-box-h);
-}
-
-
-.fnv_cnd_box::after{
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-top: 3px solid var(--pip);
-  border-right: 3px solid var(--pip);
-  pointer-events: none;
-}
-
-.fnv_cnd_label{
-  font-size: 18px;
-  opacity: 0.95;
-  line-height: 1;
-}
-
-.fnv_cnd_bars{
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  width: 180px;
-  margin-top: 2px;
-  margin-bottom: 4px;
-  padding-right: 6px;
-}
-
-.fnv_cnd_barwrap{
-  position: relative;
-  height: 10px;
-  border: 1px solid var(--pip);
-  background: transparent;
-  overflow: hidden;
-}
-
-.fnv_cnd_barwrap::before,
-.fnv_cnd_barwrap::after{
-  content: none;
-}
-
-
-
-.fnv_cnd_bar{
-  position: absolute;
-  left: 0;
-  top: 0;
-  height: 100%;
+.fnv_right_sub_bar{
   width: 100%;
+  height: auto;
 }
 
-
-
-.fnv_cnd_empty{
-  background: transparent;
-}
-
-
-
-.fnv_cnd_fill{
-  background: var(--pip);
+.fnv_right_sub_bar svg{
+  display: block;
   width: 100%;
-  transition: width 120ms linear;
-  -webkit-mask-image: none;
-  mask-image: none;
+  height: auto;
+  color: var(--pip);
+  filter:
+    drop-shadow(0 0 4px color-mix(in srgb, var(--pip) 35%, transparent))
+    drop-shadow(0 0 8px color-mix(in srgb, var(--pip) 22%, transparent));
 }
 
 
 
-/* ===================== */
-/* Ammo box              */
-/* ===================== */
+/* Dynamic colors are applied in SVG; keep overrides minimal to avoid breaking gradients. */
 
-.fnv_ammo_box{
-  flex: 1 1 0;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding-top: 4px;
-  padding-left: 10px;
-  padding-right: 10px;
-  padding-bottom: 4px;
-  position: relative;
-  box-sizing: border-box;
-  height: var(--right-box-h);
+.fnv_right_sub_bar .cond_critical{
+  animation: cond_critical_blink 380ms steps(2, end) infinite;
 }
 
-
-.fnv_ammo_box::after{
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-top: 3px solid var(--pip);
-  border-right: 3px solid var(--pip);
-  pointer-events: none;
+.fnv_right_sub_bar svg text{
+  font-family: "Monofonto", monospace;
+  font-variant-numeric: tabular-nums;
 }
 
-
-
-.fnv_ammo{
-  font-size: 22px;
-  opacity: 0.95;
-  letter-spacing: 1px;
-  line-height: 1;
+/* Right sub bar dynamic tones (IDs are prefixed per instance) */
+#fnv_right_sub_bar [id$="rect14"],
+#fnv_right_sub_bar [id$="rect36"]{
+  fill: var(--pip-dark2);
 }
 
-/* Mic status */
-.fnv_mic_box{
-  width: var(--mic-box-w);
-  height: var(--right-box-h);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  box-sizing: border-box;
-  padding-top: 4px;
-  padding-right: 6px;
+#fnv_right_sub_bar [id$="rect15"],
+#fnv_right_sub_bar [id$="rect37"]{
+  fill: var(--pip);
 }
 
-.fnv_mic_box::after{
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-top: 3px solid var(--pip);
-  border-right: 3px solid var(--pip);
-  pointer-events: none;
+#fnv_right_sub_bar [id$="rect24"],
+#fnv_right_sub_bar [id$="path24"],
+#fnv_right_sub_bar [id$="rect35"],
+#fnv_right_sub_bar [id$="path35"],
+#fnv_right_sub_bar [id$="rect38"],
+#fnv_right_sub_bar [id$="path38"],
+#fnv_right_sub_bar [id$="rect39"],
+#fnv_right_sub_bar [id$="path39"]{
+  fill: var(--pip-dark1);
 }
 
-.fnv_mic_icon{
-  width: 22px;
-  height: 22px;
-  stroke: var(--pip);
-  stroke-width: 2.2;
+#fnv_right_sub_bar [id$="text45"],
+#fnv_right_sub_bar [id$="tspan45"]{
+  fill: var(--pip);
 }
 
-
-
-
-
-/* Vertical separator between CND and AMMO */
-.fnv_v_separator{
-  display: none;
+@keyframes cond_critical_blink{
+  0%{ opacity: 1; }
+  50%{ opacity: 0.25; }
+  100%{ opacity: 1; }
 }
 
 

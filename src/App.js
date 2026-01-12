@@ -1,10 +1,9 @@
 import { useEffect } from "react";
-import { Mic } from "lucide-react";
 import "./App.css";
 import Events from "./Events";
 import "./hud";
 import { ReactComponent as HpBarSvg } from "./assets/hud/hp_bar.svg";
-import { ReactComponent as ApBarSvg } from "./assets/hud/ap_bar.svg";
+import RightSubBar from "./RightSubBar";
 
 function App() {
   useEffect(() => {
@@ -255,39 +254,7 @@ function App() {
       <div id="hud_right_fnv">
         <div className="hud_topline right"></div>
 
-        <div className="fnv_ap_bar" id="ap_bar" aria-hidden="true">
-          <ApBarSvg className="fnv_ap_svg" preserveAspectRatio="xMaxYMid meet" />
-        </div>
-
-        <div className="fnv_right_row">
-          <div className="fnv_cnd_box">
-            <div className="fnv_cnd_label">CND</div>
-
-            <div className="fnv_cnd_bars">
-              <div className="fnv_cnd_barwrap" id="cnd_armor_wrap">
-                <div className="fnv_cnd_bar fnv_cnd_empty"></div>
-                <div className="fnv_cnd_bar fnv_cnd_fill" id="cnd_armor_fill"></div>
-              </div>
-
-              <div className="fnv_cnd_barwrap" id="cnd_weapon_wrap">
-                <div className="fnv_cnd_bar fnv_cnd_empty"></div>
-                <div className="fnv_cnd_bar fnv_cnd_fill" id="cnd_weapon_fill"></div>
-              </div>
-            </div>
-          </div>
-
-          <div className="fnv_v_separator" aria-hidden="true"></div>
-
-          <div className="fnv_ammo_box">
-            <div className="fnv_ammo" id="ammo_text">
-              12/532
-            </div>
-          </div>
-
-          <div className="fnv_mic_box" aria-label="Voice chat status">
-            <Mic className="fnv_mic_icon" />
-          </div>
-        </div>
+        <RightSubBar />
       </div>
 
       <div id="fnv_notify"></div>
