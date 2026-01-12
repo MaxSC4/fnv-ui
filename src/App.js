@@ -3,6 +3,8 @@ import { Mic } from "lucide-react";
 import "./App.css";
 import Events from "./Events";
 import "./hud";
+import { ReactComponent as HpBarSvg } from "./assets/hud/hp_bar.svg";
+import { ReactComponent as ApBarSvg } from "./assets/hud/ap_bar.svg";
 
 function App() {
   useEffect(() => {
@@ -230,15 +232,12 @@ function App() {
 
 
       <div id="hud_hp_fallout">
-        <div className="hud_topline">
-          <div className="hud_tag">HP</div>
+        <div className="hud_topline hud_topline_hp">
           <div className="hud_status" id="hud_status"></div>
         </div>
 
-        <div className="fnv_bar" id="hp_bar">
-          <div className="fnv_track" id="hp_track">
-            <div className="fnv_track_fill" id="hp_fill"></div>
-          </div>
+        <div className="fnv_hp_bar" id="hp_bar" aria-hidden="true">
+          <HpBarSvg className="fnv_hp_svg" preserveAspectRatio="xMinYMid meet" />
         </div>
 
         <div className="fnv_compass">
@@ -254,16 +253,10 @@ function App() {
       </div>
 
       <div id="hud_right_fnv">
-        <div className="hud_topline right">
-          <div className="hud_status" id="ap_tag">
-            AP
-          </div>
-        </div>
+        <div className="hud_topline right"></div>
 
-        <div className="fnv_bar fnv_bar_right" id="ap_bar">
-          <div className="fnv_track" id="ap_track">
-            <div className="fnv_track_fill" id="ap_fill"></div>
-          </div>
+        <div className="fnv_ap_bar" id="ap_bar" aria-hidden="true">
+          <ApBarSvg className="fnv_ap_svg" preserveAspectRatio="xMaxYMid meet" />
         </div>
 
         <div className="fnv_right_row">

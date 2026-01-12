@@ -39,7 +39,7 @@ body{
 #hud_hp_fallout{
   display: inline-block;
   position: fixed;
-  left: 18px;
+  left: 24px;
   bottom: 22px;
   width: min(520px, calc(100vw - 24px));
   color: var(--pip);
@@ -47,12 +47,13 @@ body{
   text-transform: uppercase;
   letter-spacing: 0.6px;
   text-shadow: 0 0 2px rgba(255,182,66,0.18); /* micro glow */
-  overflow: visible
+  overflow: visible;
+  text-align: left;
 }
 
 #hp_bar{
-  box-sizing: content-box;
-  overflow: hidden;
+  box-sizing: border-box;
+  overflow: visible;
 }
 
 /* HP + status line */
@@ -61,6 +62,10 @@ body{
   align-items:flex-end;
   justify-content: space-between;
   margin-bottom: 6px;
+}
+
+.hud_topline_hp{
+  justify-content: flex-end;
 }
 .hud_tag{
   font-size: 18px;
@@ -73,7 +78,7 @@ body{
 }
 
 
-/* ===== FNV HP BAR — final tuning ===== */
+/* ===== FNV HP BAR ===== */
 
 /* La barre sert de cadre */
 .fnv_bar{
@@ -117,18 +122,34 @@ body{
   overflow: hidden;
 
   z-index: 1;
-
-  background-image: linear-gradient(
-    to right,
-    var(--pip) 0px,
-    var(--pip) var(--tick-w),
-    transparent var(--tick-w),
-    transparent calc(var(--tick-w) + var(--gap))
-  );
-  background-size: calc(var(--tick-w) + var(--gap)) 100%;
-  background-repeat: repeat;
-
+  background: none;
   opacity: 1;
+}
+
+.fnv_hp_bar{
+  position: relative;
+  width: 100%;
+  height: 80px;
+}
+
+.fnv_hp_svg{
+  display: block;
+  width: 100%;
+  height: 100%;
+  color: var(--pip);
+}
+
+.fnv_ap_bar{
+  position: relative;
+  width: 100%;
+  height: 80px;
+}
+
+.fnv_ap_svg{
+  display: block;
+  width: 100%;
+  height: 100%;
+  color: var(--pip);
 }
 
 #ap_fill{
@@ -146,14 +167,12 @@ body{
   right: auto;
 }
 
-#hp_bar.hp_low .fnv_track_fill{
-  background-image: linear-gradient(
-    to right,
-    var(--pip-red) 0px,
-    var(--pip-red) var(--tick-w),
-    transparent var(--tick-w),
-    transparent calc(var(--tick-w) + var(--gap))
-  );
+#hp_ticks_fill{
+  color: var(--pip);
+}
+
+#hp_bar.hp_low #hp_ticks_fill{
+  color: var(--pip-red);
   animation: hp_danger_blink 600ms steps(2, end) infinite;
 }
 
@@ -163,14 +182,31 @@ body{
   100%{ opacity: 1; }
 }
 
-#ap_bar.ap_low .fnv_track_fill{
-  background-image: linear-gradient(
-    to right,
-    var(--pip-red) 0px,
-    var(--pip-red) var(--tick-w),
-    transparent var(--tick-w),
-    transparent calc(var(--tick-w) + var(--gap))
-  );
+#ap_ticks_fill{
+  color: var(--pip);
+}
+
+#ap_bar.ap_low #ap_ticks_fill{
+  color: var(--pip-red);
+}
+
+.fnv_ticks_svg{
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.fnv_ticks_clip_rect{
+  transition: width 140ms linear;
+}
+
+#hpClipRect{
+  transition: width 140ms linear;
+}
+
+#apClipRect{
+  transition: width 140ms linear;
 }
 
 
@@ -321,7 +357,7 @@ body{
 /* Right block position */
 #hud_right_fnv{
   position: fixed;
-  right: 18px;
+  right: 24px;
   bottom: 22px;
   width: min(520px, calc(100vw - 24px)); /* même largeur que HP si tu veux symétrie */
   color: var(--pip);
@@ -329,6 +365,7 @@ body{
   text-transform: uppercase;
   letter-spacing: 0.6px;
   text-shadow: 0 0 2px rgba(255,182,66,0.18);
+  text-align: left;
 }
 
 /* Align top line on right */

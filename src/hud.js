@@ -8,8 +8,9 @@ import Events from "./Events";
   /* ===================== */
   const elHpNow  = () => document.getElementById("hp_now");
   const elHpMax  = () => document.getElementById("hp_max");
-  const elHpFill = () => document.getElementById("hp_fill"); // HP fill wrapper (width %)
+  const elHpFill = () => document.getElementById("hp_fill"); // legacy (no longer used)
   const elHudStatus = () => document.getElementById("hud_status");
+  const elHpTicksClip = () => document.getElementById("hpClipRect");
 
   const elCaps   = () => document.getElementById("caps_value");
   const elNotifs = () => document.getElementById("fnv_notify");
@@ -20,8 +21,9 @@ import Events from "./Events";
   const elCompassLabels = () => document.getElementById("compass_labels");
 
   // Right HUD (AP/CND/Ammo)
-  const elApFillWrap     = () => document.getElementById("ap_fill"); // AP fill wrapper (width %)
+  const elApFillWrap     = () => document.getElementById("ap_fill"); // legacy (no longer used)
   const elApBar          = () => document.getElementById("ap_bar");
+  const elApTicksClip = () => document.getElementById("apClipRect");
   const elAmmoText       = () => document.getElementById("ammo_text");
   const elCndArmorFill   = () => document.getElementById("cnd_armor_fill");
   const elCndWeaponFill  = () => document.getElementById("cnd_weapon_fill");
@@ -61,6 +63,12 @@ import Events from "./Events";
     return Math.max(a, Math.min(b, n));
   }
 
+  function setTicksClip(rect, pct) {
+    if (!rect) return;
+    const safe = clamp(pct, 0, 100) / 100;
+    rect.setAttribute("width", safe.toFixed(4));
+  }
+
   function normDeg(d) {
     d = Number(d || 0);
     d = d % 360;
@@ -97,7 +105,7 @@ import Events from "./Events";
     }
 
     const hpPct = hpMax > 0 ? (hp / hpMax) * 100 : 0;
-    if (hpFillEl) hpFillEl.style.width = clamp(hpPct, 0, 100) + "%";
+    setTicksClip(elHpTicksClip(), hpPct);
     const hpBar = document.getElementById("hp_bar");
     if (hpBar) hpBar.classList.toggle("hp_low", hpMax > 0 && hpPct < 20);
 
@@ -107,7 +115,8 @@ import Events from "./Events";
     const apFill = elApFillWrap();
     const apBar = elApBar();
     const apPct = apMax > 0 ? (apNow / apMax) * 100 : 0;
-    if (apFill) apFill.style.width = clamp(apPct, 0, 100) + "%";
+    if (apFill) apFill.style.width = "100%";
+    setTicksClip(elApTicksClip(), apPct);
     if (apBar) apBar.classList.toggle("ap_low", apMax > 0 && apPct < 20);
 
     // -------- CND (placeholder) --------
