@@ -284,8 +284,8 @@ import Events from "./Events";
         : `${Math.floor(Number(ammoNow))}/${Math.floor(Number(ammoReserve))}`;
     if (ammoSpanEl) ammoSpanEl.textContent = ammoText;
     if (ammoEl) {
-      ammoEl.setAttribute("text-anchor", "end");
-      ammoEl.setAttribute("dominant-baseline", "middle");
+      ammoEl.setAttribute("text-anchor", "middle");
+      ammoEl.setAttribute("dominant-baseline", "alphabetic");
       if (!ammoSpanEl) ammoEl.textContent = ammoText;
     }
 

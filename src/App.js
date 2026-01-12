@@ -10,8 +10,11 @@ function App() {
     Events.Call("Ready");
   }, []);
 
+  const rootClassName =
+    process.env.NODE_ENV === "development" ? "fnv_root fnv_dev_bg" : "fnv_root";
+
   return (
-    <div className="fnv_root">
+    <div className={rootClassName}>
       <div id="fnv_dialog" className="fnv_dialog fnv_hidden" aria-hidden="true">
         <div className="fnv_dialog_panel">
           <div className="fnv_dialog_npcname" id="fnv_dialog_npcname"></div>
