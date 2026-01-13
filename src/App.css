@@ -12,6 +12,8 @@
   --bg: rgba(0,0,0,0.0);
   --panel: rgba(0,0,0,0.0);
   --compass-color: var(--pip);
+  --hud-block-w: 576px;
+  --hud-block-h: 216px;
 }
 
 @font-face{
@@ -45,31 +47,33 @@ body{
   background-repeat: no-repeat;
 }
 
+.fnv_dev_keys{
+  position: fixed;
+  top: 10px;
+  right: 16px;
+  z-index: 10000;
+  padding: 4px 8px;
+  border: 1px solid rgba(255,182,66,0.4);
+  background: rgba(0,0,0,0.35);
+  color: var(--pip);
+  font-family: ui-monospace, Consolas, Menlo, Monaco, "Liberation Mono", monospace;
+  font-size: 11px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  pointer-events: none;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.fnv_dev_keys_stats{
+  opacity: 0.85;
+}
 *, *::before, *::after{
   box-sizing: border-box;
 }
 
-#hud_hp_fallout{
-  display: inline-block;
-  position: fixed;
-  left: 24px;
-  bottom: 22px;
-  width: min(520px, calc(100vw - 24px));
-  color: var(--pip);
-  font-family: ui-monospace, Consolas, Menlo, Monaco, "Liberation Mono", monospace;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  text-shadow: 0 0 2px rgba(255,182,66,0.18); /* micro glow */
-  overflow: visible;
-  text-align: left;
-}
-
-#hp_bar{
-  box-sizing: border-box;
-  overflow: visible;
-}
-
-/* HP + status line */
+/* HP/Compass status line */
 .hud_topline{
   display:flex;
   align-items:flex-end;
@@ -90,263 +94,29 @@ body{
   opacity: 0.85;
 }
 
-
-/* ===== FNV HP BAR ===== */
-
-/* La barre sert de cadre */
-.fnv_bar{
-  position: relative;
-  width: 100%;
-  height: 30px;
-  box-sizing: border-box;
-
-  /* Cadre Fallout propre */
-  border-left: 3px solid var(--pip);
-  border-right: 3px solid var(--pip);
-  border-bottom: 3px solid var(--pip);
-  border-top: none;
-
-  background: transparent;
-  overflow: hidden;
-}
-
-/* Track interne = zone utile */
-.fnv_track{
-  position: absolute;
-  left: 4px;   /* = border-left */
-  right: 3px;  /* = border-right */
-  top: 0;
-  bottom: 3px; /* = border-bottom (optionnel) */
-  overflow: hidden;
-
-  --tick-w: 8px;
-  --gap: 2px;
-
-  background: transparent;
-}
-/*  */
-/* Fill : ticks pleins (vert) + width variable */
-.fnv_track_fill{
-  position: absolute;
-  left: 0;
-  top: 0;
-  height: 100%;
-  width: 0%;
-  overflow: hidden;
-
-  z-index: 1;
-  background: none;
-  opacity: 1;
-}
-
-.fnv_hp_bar{
-  position: relative;
-  width: 100%;
-  height: 80px;
-}
-
-.fnv_hp_svg{
-  display: block;
-  width: 100%;
-  height: 100%;
+/* Left HUD (HP + Compass) */
+.hudLeft{
+  position: fixed;
+  left: 24px;
+  bottom: 18px;
+  width: var(--hud-block-w, 576px);
+  height: var(--hud-block-h, 216px);
+  pointer-events: none;
   color: var(--pip);
-}
-
-#hp_fill{
-  transition: width 140ms linear;
-  left: 0;
-  right: auto;
-}
-
-#hp_ticks_fill{
-  color: var(--pip);
-}
-
-#hp_bar.hp_low #hp_ticks_fill{
-  color: var(--pip-red);
-  animation: hp_danger_blink 600ms steps(2, end) infinite;
-}
-
-@keyframes hp_danger_blink{
-  0%{ opacity: 1; }
-  50%{ opacity: 0.35; }
-  100%{ opacity: 1; }
-}
-
-#fnv_right_sub_bar.ap_low #hp_ticks_fill{
-  color: var(--pip-red);
-}
-
-.fnv_ticks_svg{
   display: block;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
+  filter:
+    drop-shadow(0 1px 2px rgba(0,0,0,0.35))
+    drop-shadow(0 0 4px color-mix(in srgb, var(--pip) 30%, transparent))
+    drop-shadow(0 0 8px color-mix(in srgb, var(--pip) 20%, transparent));
 }
-
-.fnv_ticks_clip_rect{
-  transition: width 140ms linear;
-}
-
-#hpClipRect{
-  transition: width 140ms linear;
-}
-
-#apClipRect{
-  transition: width 140ms linear;
-}
-
-
-
-
-
-
-/* ===================== */
-/* Compass Fallout (render + labels) */
-/* ===================== */
-
-.fnv_compass{
-  position: relative;
-  margin-top: 2px;
-  height: 32px;
-  width: 100%;
-  padding-top: 4px;
-  padding-left: 0;
-  box-sizing: content-box;
-  border-top: 3px solid var(--compass-color);
-  border-left: 3px solid var(--compass-color);
-  border-right: 3px solid transparent;
-}
-
-.fnv_compass_center{
-  position: absolute;
-  left: 50%;
-  top: -2px;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
-  border-top: 10px solid var(--compass-color);
-  z-index: 3;
-  pointer-events: none;
-  filter: drop-shadow(0 0 2px rgba(255,182,66,0.35));
-}
-
-/* fenêtre unique qui clip TOUT (ticks + labels) */
-.fnv_compass_viewport{
-  position: relative;
-  width: calc(100% - 6px);
-  margin-left: 6px;
-  height: 28px;
-  overflow: hidden;
-  isolation: isolate;
-  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 8%, #000 92%, transparent 100%);
-  mask-image: linear-gradient(to right, transparent 0%, #000 8%, #000 92%, transparent 100%);
-}
-
-/* moving compass band */
-.fnv_compass_band{
-  position: absolute;
-  left: 50%;
-  top: 0;
-  height: 100%;
-  z-index: 2;
-  transform: translate3d(0, 0, 0);
-  will-change: transform;
-  pointer-events: none;
-}
-
-.fnv_compass_line{
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 62%;
-  height: 3px;
-  transform: translateY(-50%);
-  background: rgba(255,182,66,0.7);
-  z-index: 1;
-  display: none;
-}
-
-.fnv_compass_line_segment{
-  position: absolute;
-  top: 62%;
-  height: 3px;
-  transform: translateY(-50%);
-  background: rgba(255,182,66,0.7);
-  z-index: 1;
-}
-
-.fnv_compass_ticks{
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 100%;
-  z-index: 2;
-}
-
-.fnv_compass_tick{
-  position: absolute;
-  top: 62%;
-  width: 2px;
-  background: var(--compass-color);
-  transform: translate(-50%, -100%);
-}
-
-.fnv_compass_tick.small{
-  height: 5px;
-  opacity: 0.75;
-}
-
-.fnv_compass_tick.big{
-  height: 10px;
-  opacity: 0.95;
-}
-
-/* labels dans la même fenêtre */
-.fnv_compass_labels{
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 28px;
-  z-index: 4;
-  pointer-events: none;
-  letter-spacing: 1px;
-  opacity: 0.95;
-}
-
-/* décale un poil vers le bas pour éviter la coupe */
-.fnv_compass_label{
-  position: absolute;
-  top: 62%;
-  transform: translate(-50%, -50%);
-  white-space: nowrap;
-
-  color: var(--compass-color);
-  font-size: 18px;
-  line-height: 20px;
-  text-shadow: 0 0 2px rgba(255,182,66,0.2);
-  padding: 0 10px;
-  z-index: 4;
-
-  transition: opacity 80ms linear;
-}
-
-.fnv_compass,
-.fnv_compass_viewport{
-  background-image: none !important;
-}
-
 
 /* Right HUD position: tweak --hudRight/--hudBottom (margins) and --pip (color) */
 #hud_right_fnv{
   position: fixed;
   right: var(--hudRight, 24px);
   bottom: var(--hudBottom, 24px);
-  width: min(520px, calc(100vw - 24px));
+  width: min(var(--hud-block-w, 576px), calc(100vw - 24px));
+  height: var(--hud-block-h, 216px);
   color: var(--pip);
   font-family: ui-monospace, Consolas, Menlo, Monaco, "Liberation Mono", monospace;
   text-transform: uppercase;
@@ -363,28 +133,24 @@ body{
   margin-bottom: 6px;
 }
 
-/* Mirror bar frame (right side) */
-.fnv_bar_right{
-  border-left: 3px solid var(--pip);
-  border-right: 3px solid var(--pip);
-  border-bottom: 3px solid var(--pip);
-  border-top: none;
-}
-
 .fnv_right_sub_bar{
   width: 100%;
-  height: auto;
+  height: 100%;
 }
 
 .fnv_right_sub_bar svg{
   display: block;
   width: 100%;
-  height: auto;
+  height: 100%;
   color: var(--pip);
   filter:
     drop-shadow(0 1px 2px rgba(0,0,0,0.35))
     drop-shadow(0 0 4px color-mix(in srgb, var(--pip) 35%, transparent))
     drop-shadow(0 0 8px color-mix(in srgb, var(--pip) 22%, transparent));
+}
+
+#fnv_right_sub_bar.ap_low [id$="hp_ticks_fill"]{
+  color: var(--pip-red);
 }
 
 
