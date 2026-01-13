@@ -1,0 +1,123 @@
+/* HP/Compass status line */
+.hud_topline{
+  display:flex;
+  align-items:flex-end;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.hud_topline_hp{
+  justify-content: flex-end;
+}
+.hud_tag{
+  font-size: 18px;
+  line-height: 1;
+}
+.hud_status{
+  font-size: 18px;
+  line-height: 1;
+  opacity: 0.85;
+}
+
+/* Left HUD (HP + Compass) */
+.hudLeft{
+  position: fixed;
+  left: 24px;
+  bottom: 18px;
+  width: var(--hud-block-w, 576px);
+  height: var(--hud-block-h, 216px);
+  pointer-events: none;
+  color: var(--pip);
+  display: block;
+  filter:
+    drop-shadow(0 1px 2px rgba(0,0,0,0.35))
+    drop-shadow(0 0 4px color-mix(in srgb, var(--pip) 30%, transparent))
+    drop-shadow(0 0 8px color-mix(in srgb, var(--pip) 20%, transparent));
+}
+
+/* Right HUD position: tweak --hudRight/--hudBottom (margins) and --pip (color) */
+#hud_right_fnv{
+  position: fixed;
+  right: var(--hudRight, 24px);
+  bottom: var(--hudBottom, 24px);
+  width: min(var(--hud-block-w, 576px), calc(100vw - 24px));
+  height: var(--hud-block-h, 216px);
+  color: var(--pip);
+  font-family: ui-monospace, Consolas, Menlo, Monaco, "Liberation Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  text-shadow: 0 0 2px rgba(255,182,66,0.18);
+  text-align: left;
+  pointer-events: none;
+}
+
+/* Align top line on right */
+.hud_topline.right{
+  display:flex;
+  justify-content: flex-end;
+  margin-bottom: 6px;
+}
+
+.fnv_right_sub_bar{
+  width: 100%;
+  height: 100%;
+}
+
+.fnv_right_sub_bar svg{
+  display: block;
+  width: 100%;
+  height: 100%;
+  color: var(--pip);
+  filter:
+    drop-shadow(0 1px 2px rgba(0,0,0,0.35))
+    drop-shadow(0 0 4px color-mix(in srgb, var(--pip) 35%, transparent))
+    drop-shadow(0 0 8px color-mix(in srgb, var(--pip) 22%, transparent));
+}
+
+#fnv_right_sub_bar.ap_low [id$="hp_ticks_fill"]{
+  color: var(--pip-red);
+}
+
+/* Dynamic colors are applied in SVG; keep overrides minimal to avoid breaking gradients. */
+
+.fnv_right_sub_bar .cond_critical{
+  animation: cond_critical_blink 380ms steps(2, end) infinite;
+}
+
+.fnv_right_sub_bar svg text{
+  font-family: "Monofonto", monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Right sub bar dynamic tones (IDs are prefixed per instance) */
+#fnv_right_sub_bar [id$="rect14"],
+#fnv_right_sub_bar [id$="rect36"]{
+  fill: var(--pip-dark2);
+}
+
+#fnv_right_sub_bar [id$="rect15"],
+#fnv_right_sub_bar [id$="rect37"]{
+  fill: var(--pip);
+}
+
+#fnv_right_sub_bar [id$="rect24"],
+#fnv_right_sub_bar [id$="path24"],
+#fnv_right_sub_bar [id$="rect35"],
+#fnv_right_sub_bar [id$="path35"],
+#fnv_right_sub_bar [id$="rect38"],
+#fnv_right_sub_bar [id$="path38"],
+#fnv_right_sub_bar [id$="rect39"],
+#fnv_right_sub_bar [id$="path39"]{
+  fill: var(--pip-dark1);
+}
+
+#fnv_right_sub_bar [id$="text45"],
+#fnv_right_sub_bar [id$="tspan45"]{
+  fill: var(--pip);
+}
+
+@keyframes cond_critical_blink{
+  0%{ opacity: 1; }
+  50%{ opacity: 0.25; }
+  100%{ opacity: 1; }
+}

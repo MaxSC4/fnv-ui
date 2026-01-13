@@ -1,0 +1,83 @@
+/* ===================== */
+/* Notifications (FNV)   */
+/* ===================== */
+#fnv_notify{
+  position: fixed;
+  top: 32px;
+  left: 24px;
+  z-index: 12000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.fnv_notify_item{
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 140ms linear, transform 140ms ease-out;
+}
+
+.fnv_notify_item.show{
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.fnv_notify_item.hide{
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 220ms linear, transform 220ms ease-in;
+}
+
+.fnv_notify_frame{
+  position: relative;
+  width: min(620px, calc(100vw - 48px));
+  height: 96px;
+  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  align-items: center;
+  background: transparent;
+  border-left: 2px solid rgba(255,182,66,0.9);
+  border-top: 2px solid rgba(255,182,66,0.9);
+}
+
+.fnv_notify_icon{
+  width: 86px;
+  height: 86px;
+  margin-left: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fnv_notify_icon_img{
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: var(--pip-filter);
+}
+
+.fnv_notify_icon.empty{
+  background: transparent;
+}
+
+.fnv_notify_text{
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-self: center;
+  height: 100%;
+  gap: 4px;
+  font-family: "Roboto Condensed", "Arial Narrow", Arial, sans-serif;
+  text-transform: none;
+  font-weight: 700;
+  color: rgba(255,182,66,1);
+  text-shadow: 0 2px 0 rgba(0,0,0,0.85), 0 0 6px rgba(0,0,0,0.6);
+}
+
+.fnv_notify_title,
+.fnv_notify_subtitle{
+  font-size: 28px;
+  line-height: 1.0;
+}

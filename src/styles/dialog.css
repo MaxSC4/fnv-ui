@@ -1,0 +1,158 @@
+/* ===================== */
+/* Dialogue FNV Panel    */
+/* ===================== */
+
+.fnv_dialog{
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 10%;              /* proche FNV : panneau au bas, pas collAc */
+  z-index: 9999;
+  pointer-events: auto;     /* panel "visuel"; on capte via JS keydown */
+}
+
+/* Panel central (bas-centre) */
+.fnv_dialog_panel{
+  width: 760px;
+  max-width: calc(100vw - 40px);
+  margin: 0 auto;
+
+  position: relative;
+  padding: 12px 14px;
+  pointer-events: auto;
+
+  /* cadre fin FNV */
+  border: 2px solid var(--pip);
+  background: rgba(0,0,0,0.25);
+  box-shadow: none;
+
+  filter: drop-shadow(0 0 2px rgba(255,182,66,0.20));
+}
+
+/* NPC name Aÿ droite (comme FNV) */
+.fnv_dialog_npcname{
+  position: absolute;
+  right: 14px;
+  top: -26px;
+
+  color: var(--pip);
+  font-family: ui-monospace, Consolas, Menlo, Monaco, "Liberation Mono", monospace;
+  font-size: 18px;
+  line-height: 1;
+  letter-spacing: 0.6px;
+
+  text-shadow: 0 0 2px rgba(255,182,66,0.18);
+
+  /* IMPORTANT : pas de uppercase forcAc */
+  text-transform: none;
+}
+
+/* Ligne PNJ optionnelle au-dessus des options */
+.fnv_dialog_npcline{
+  margin-bottom: 10px;
+
+  color: var(--pip);
+  opacity: 0.95;
+
+  font-family: ui-monospace, Consolas, Menlo, Monaco, "Liberation Mono", monospace;
+  font-size: 16px;
+  line-height: 1.2;
+  letter-spacing: 0.4px;
+
+  text-transform: none;
+}
+
+/* Liste options */
+.fnv_dialog_options{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+/* Une option */
+.fnv_dialog_option{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 6px 8px;
+
+  color: var(--pip);
+  font-family: ui-monospace, Consolas, Menlo, Monaco, "Liberation Mono", monospace;
+  font-size: 18px;
+  line-height: 1.1;
+  letter-spacing: 0.4px;
+
+  text-transform: none;
+
+  /* pas de boutons modernes */
+  background: transparent;
+  border: 1px solid transparent;
+
+  opacity: 0.95;
+  pointer-events: auto;
+  cursor: default;
+}
+
+/* Petit chevron Aÿ gauche comme FNV */
+.fnv_dialog_marker{
+  width: 14px;
+  text-align: center;
+  opacity: 0.9;
+  align-self: center;
+}
+
+/* Surbrillance sAclection */
+.fnv_dialog_option.selected{
+  border-color: rgba(255,182,66,0.65);
+  background: rgba(255,182,66,0.08);
+}
+
+.fnv_dialog_option:hover{
+  border-color: rgba(255,182,66,0.45);
+  background: rgba(255,182,66,0.06);
+}
+
+/* Option dAcjAÿ utilisAce (plus sombre) */
+.fnv_dialog_option.used{
+  opacity: 0.60;
+}
+
+/* Option disabled (non selectable) */
+.fnv_dialog_option.disabled{
+  opacity: 0.30;
+}
+
+.fnv_dialog_option.disabled:hover{
+  border-color: transparent;
+  background: transparent;
+}
+
+/* Indicateur "sortie" optionnel */
+.fnv_dialog_action{
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0.85;
+}
+
+.fnv_dialog_action_icon{
+  width: 18px;
+  height: 18px;
+  display: block;
+  stroke: var(--pip);
+  stroke-width: 2;
+  fill: none;
+}
+
+/* Micro apparition (FNV-like) */
+.fnv_dialog.fnv_dialog_open{
+  animation: fnv_dialog_in 120ms ease-out;
+}
+
+@keyframes fnv_dialog_in{
+  from{ opacity: 0; transform: translateY(6px); }
+  to{ opacity: 1; transform: translateY(0); }
+}

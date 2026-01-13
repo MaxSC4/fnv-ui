@@ -1,0 +1,93 @@
+/* ===================== */
+/* Repair Kit Menu       */
+/* ===================== */
+.fnv_repair{
+  position: fixed;
+  inset: 0;
+  z-index: 13000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  color: var(--pip);
+  font-family: ui-monospace, Consolas, Menlo, Monaco, "Liberation Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  text-shadow: 0 0 2px rgba(255,182,66,0.18);
+  background: rgba(0,0,0,0.55);
+}
+
+.fnv_repair_panel{
+  min-width: 340px;
+  max-width: 460px;
+  padding: 12px 14px;
+  border: 1px solid var(--pip-dim);
+  background: rgba(0,0,0,0.25);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(0,0,0,0) 0,
+    rgba(0,0,0,0) 6px,
+    rgba(0,0,0,0.16) 7px
+  );
+  pointer-events: auto;
+}
+
+.fnv_repair_title{
+  font-size: 14px;
+  margin-bottom: 8px;
+  letter-spacing: 1px;
+}
+
+.fnv_repair_list{
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.fnv_repair_row{
+  display: grid;
+  grid-template-columns: 16px 32px 1fr;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 6px;
+  font-size: 14px;
+  text-transform: none;
+  opacity: 0.9;
+  cursor: pointer;
+  pointer-events: auto;
+  line-height: 1.2;
+}
+
+.fnv_repair_row_marker{
+  text-align: center;
+  font-size: 12px;
+  align-self: start;
+  padding-top: 4px;
+}
+
+.fnv_repair_icon{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+}
+
+.fnv_repair_icon img{
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  filter: var(--pip-filter);
+}
+
+.fnv_repair_row.selected{
+  background: var(--pip-dimmer);
+  opacity: 1;
+}
+
+.fnv_repair_hint{
+  font-size: 11px;
+  opacity: 0.8;
+  text-align: right;
+}

@@ -1,0 +1,117 @@
+/* ===================== */
+/* Container Loot Panel  */
+/* ===================== */
+.fnv_container{
+  position: fixed;
+  right: clamp(24px, 6vw, 90px);
+  top: clamp(24px, 6vw, 90px);
+  z-index: 9998;
+  pointer-events: none;
+  animation: fnv_container_in 120ms ease-out;
+}
+
+.fnv_container_frame{
+  width: clamp(280px, 32vw, 420px);
+  padding: 10px 12px;
+  background: rgba(45, 28, 12, 0.75);
+  border: 1px solid rgba(255,182,66,0.35);
+  border-radius: 2px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+  color: var(--pip);
+  font-family: "Roboto Condensed", "Arial Narrow", Arial, sans-serif;
+  letter-spacing: 0.3px;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.6);
+}
+
+.fnv_container_header{
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.fnv_container_list{
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 260px;
+  overflow: auto;
+  scrollbar-width: none;
+}
+
+.fnv_container_list::-webkit-scrollbar{
+  width: 0;
+  height: 0;
+}
+
+.fnv_container_row{
+  display: grid;
+  grid-template-columns: 24px 1fr 90px;
+  align-items: center;
+  height: 24px;
+  padding: 2px 6px;
+  font-size: 15px;
+  font-weight: 500;
+  border-radius: 2px;
+}
+
+.fnv_container_row_icon{
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fnv_container_row_icon img{
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  filter: var(--pip-filter);
+}
+
+.fnv_container_row_name{
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.fnv_container_row_cnd{
+  height: 8px;
+  background: rgba(0,0,0,0.35);
+  justify-self: end;
+  width: 90px;
+}
+
+.fnv_container_row_cnd_fill{
+  height: 100%;
+  width: 0%;
+  background: #d9a63a;
+}
+
+.fnv_container_row.selected{
+  background: #d9a63a;
+  color: #2a1a08;
+}
+
+.fnv_container_row.selected .fnv_container_row_icon img{
+  filter: brightness(0) saturate(100%) invert(14%) sepia(14%) saturate(1539%) hue-rotate(350deg) brightness(90%) contrast(92%);
+}
+
+.fnv_container_row.selected .fnv_container_row_cnd_fill{
+  background: #2a1a08;
+}
+
+.fnv_container_footer{
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+@keyframes fnv_container_in{
+  from{ opacity: 0; transform: translateY(-4px); }
+  to{ opacity: 1; transform: translateY(0); }
+}

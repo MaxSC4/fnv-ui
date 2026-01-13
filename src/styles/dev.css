@@ -1,0 +1,22 @@
+.fnv_dev_keys{
+  position: fixed;
+  top: 10px;
+  right: 16px;
+  z-index: 10000;
+  padding: 4px 8px;
+  border: 1px solid rgba(255,182,66,0.4);
+  background: rgba(0,0,0,0.35);
+  color: var(--pip);
+  font-family: ui-monospace, Consolas, Menlo, Monaco, "Liberation Mono", monospace;
+  font-size: 11px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  pointer-events: none;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.fnv_dev_keys_stats{
+  opacity: 0.85;
+}

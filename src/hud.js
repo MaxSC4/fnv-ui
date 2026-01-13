@@ -6,19 +6,10 @@ import Events from "./Events";
   /* ===================== */
   /* DOM Helpers           */
   /* ===================== */
-  const elHpNow  = () => document.getElementById("hp_now");
-  const elHpMax  = () => document.getElementById("hp_max");
-  const elHpFill = () => document.getElementById("hp_fill"); // legacy (no longer used)
-  const elHudStatus = () => document.getElementById("hud_status");
-  const elHpTicksClip = () => document.getElementById("hpClipRect");
+  const elHudSvgObject = () => document.getElementById("hudSvg");
 
   const elCaps   = () => document.getElementById("caps_value");
   const elNotifs = () => document.getElementById("fnv_notify");
-
-  // Compass
-  const elCompassBand   = () => document.getElementById("compass_band");
-  const elCompassTicks  = () => document.getElementById("compass_ticks");
-  const elCompassLabels = () => document.getElementById("compass_labels");
 
   // Right HUD (AP/CND/Ammo)
   const elRightSubBar    = () => document.getElementById("fnv_right_sub_bar");
@@ -83,10 +74,14 @@ import Events from "./Events";
     return Math.max(a, Math.min(b, n));
   }
 
-  function setTicksClip(rect, pct) {
-    if (!rect) return;
-    const safe = clamp(pct, 0, 100) / 100;
-    rect.setAttribute("width", `${(safe * 100).toFixed(2)}%`);
+  const COMPASS_STRIP_CYCLES = 3;
+
+  function parseTranslateX(value) {
+    if (!value) return 0;
+    const match = String(value).match(/translate\(\s*([-0-9.]+)/);
+    if (!match) return 0;
+    const parsed = parseFloat(match[1]);
+    return Number.isFinite(parsed) ? parsed : 0;
   }
 
   function setRectFillWidth(rect, pct) {
@@ -119,6 +114,115 @@ import Events from "./Events";
     tickCount: null,
     baseWidth: null
   };
+
+  const hudSvgState = {
+    doc: null,
+    hpTicksGroup: null,
+    hpClipRect: null,
+    hpClipBaseWidth: null,
+    hpLowTimer: null,
+    compassStripContent: null,
+    compassUnitsPerDeg: null,
+    compassPxPerDeg: null
+  };
+
+  function initHudSvg() {
+    const obj = elHudSvgObject();
+    if (!obj) return;
+    const svgDoc = obj.getSVGDocument();
+    if (!svgDoc) return;
+    hudSvgState.doc = svgDoc;
+
+    const ticks = svgDoc.getElementById("hp_ticks_fill");
+    hudSvgState.hpTicksGroup = ticks || null;
+    if (ticks) {
+      const clipRef = ticks.getAttribute("clip-path") || "";
+      const clipIdMatch = clipRef.match(/#([^)]+)/);
+      const clipId = clipIdMatch ? clipIdMatch[1] : null;
+      const clipPath = clipId ? svgDoc.getElementById(clipId) : null;
+      const clipRect = clipPath ? clipPath.querySelector("rect") : null;
+      hudSvgState.hpClipRect = clipRect || null;
+      if (clipRect) {
+        const base = parseFloat(clipRect.getAttribute("width") || "0");
+        hudSvgState.hpClipBaseWidth = Number.isFinite(base) ? base : 0;
+      }
+    }
+
+    const stripContent = svgDoc.getElementById("compass_strip_content");
+    hudSvgState.compassStripContent = stripContent || null;
+    if (process.env.NODE_ENV === "development" && !stripContent) {
+      console.log("[HUD] compass ids missing", { strip: !!stripContent });
+    }
+    if (stripContent) {
+      requestAnimationFrame(() => {
+        const bb = stripContent.getBBox?.();
+        if (bb && Number.isFinite(bb.width) && bb.width > 0) {
+          const oneCycleW = bb.width / COMPASS_STRIP_CYCLES;
+          hudSvgState.compassUnitsPerDeg = oneCycleW / 360;
+          hudSvgState.compassPxPerDeg = hudSvgState.compassUnitsPerDeg;
+          if (process.env.NODE_ENV === "development") {
+            stripContent.setAttribute("transform", "translate(-5 0)");
+            setTimeout(() => {
+              stripContent.setAttribute("transform", "translate(0 0)");
+            }, 60);
+          }
+        }
+      });
+    }
+
+    if (lastHudState) {
+      const hpNow = Number(lastHudState?.hp ?? 0);
+      const hpMax = Number(lastHudState?.hp_max ?? 0);
+      const hpPct = hpMax > 0 ? (hpNow / hpMax) : 0;
+      setHpTicks(hpPct);
+      setHpLowState(hpMax > 0 && (hpPct * 100) < 20);
+      renderCompass();
+    }
+  }
+
+  function ensureHudSvgReady() {
+    const obj = elHudSvgObject();
+    if (!obj) return;
+    obj.addEventListener("load", initHudSvg);
+    if (obj.contentDocument) initHudSvg();
+  }
+
+  function setHpTicks(pct01) {
+    if (!hudSvgState.hpClipRect || hudSvgState.hpClipBaseWidth == null) return;
+    const safe = clamp(pct01, 0, 1);
+    hudSvgState.hpClipRect.setAttribute("width", String(hudSvgState.hpClipBaseWidth * safe));
+  }
+
+  function setHpLowState(isLow) {
+    const ticks = hudSvgState.hpTicksGroup;
+    if (!ticks) return;
+    if (isLow) {
+      ticks.style.filter = "brightness(0.7)";
+      if (!hudSvgState.hpLowTimer) {
+        let on = true;
+        hudSvgState.hpLowTimer = window.setInterval(() => {
+          on = !on;
+          ticks.style.opacity = on ? "1" : "0.35";
+        }, 320);
+      }
+    } else {
+      if (hudSvgState.hpLowTimer) {
+        window.clearInterval(hudSvgState.hpLowTimer);
+        hudSvgState.hpLowTimer = null;
+      }
+      ticks.style.opacity = "1";
+      ticks.style.filter = "";
+    }
+  }
+
+  function setCompassYaw(deg) {
+    const strip = hudSvgState.compassStripContent;
+    const pxPerDeg = hudSvgState.compassPxPerDeg;
+    if (!strip || !pxPerDeg) return;
+    const yaw = normDeg(deg);
+    const tx = -(yaw * pxPerDeg);
+    strip.setAttribute("transform", `translate(${tx} 0)`);
+  }
 
   function getApTickCount() {
     if (apTickState.tickCount != null) return apTickState.tickCount;
@@ -209,21 +313,9 @@ import Events from "./Events";
     const hp    = Number(state?.hp ?? 0);
     const hpMax = Number(state?.hp_max ?? 0);
 
-    const hpNowEl = elHpNow();
-    const hpMaxEl = elHpMax();
-    const hpFillEl = elHpFill();
-    const hudStatusEl = elHudStatus();
-
-    if (hpNowEl) hpNowEl.textContent = hp;
-    if (hpMaxEl) hpMaxEl.textContent = hpMax;
-    if (hudStatusEl) {
-      hudStatusEl.textContent = hpMax > 0 ? `${hp}/${hpMax}` : `${hp}`;
-    }
-
-    const hpPct = hpMax > 0 ? (hp / hpMax) * 100 : 0;
-    setTicksClip(elHpTicksClip(), hpPct);
-    const hpBar = document.getElementById("hp_bar");
-    if (hpBar) hpBar.classList.toggle("hp_low", hpMax > 0 && hpPct < 20);
+    const hpPct = hpMax > 0 ? (hp / hpMax) : 0;
+    setHpTicks(hpPct);
+    setHpLowState(hpMax > 0 && (hpPct * 100) < 20);
 
     // -------- AP --------
     const apNow = Number(state?.ap?.now ?? 0);
@@ -570,184 +662,31 @@ import Events from "./Events";
   }
 
   /* ===================== */
-  /* Compass               */
+  /* Compass */
   /* ===================== */
-  const PX_PER_DEG = 2.2;
-  const COMPASS_LABEL_GAP_BASE_PX = 18;
-  const COMPASS_LABEL_GAP_PER_CHAR_PX = 8;
   const COMPASS_EASE = 0.22;
 
-  let headingTargetNorm = 0;
   let headingTargetUnwrapped = 0;
-  let headingRenderNorm = 0;
-  let headingRenderUnwrapped = 0;
-  let lastHeadingNorm = null;
+  let headingRenderUnwrapped = null;
   let compassRaf = null;
 
-  function buildCompassBand() {
-    const band = elCompassBand();
-    const ticks = elCompassTicks();
-    const labelsEl = elCompassLabels();
-    if (!band || !ticks || !labelsEl) return false;
-
-    ticks.innerHTML = "";
-    labelsEl.innerHTML = "";
-    band.querySelectorAll(".fnv_compass_line_segment").forEach((el) => el.remove());
-    const line = band.querySelector(".fnv_compass_line");
-    if (line) line.style.display = "none";
-
-    const labels = [
-      { d: 0,   t: "N"  },
-      { d: 45,  t: "NE" },
-      { d: 90,  t: "E"  },
-      { d: 135, t: "SE" },
-      { d: 180, t: "S"  },
-      { d: 225, t: "SW" },
-      { d: 270, t: "W"  },
-      { d: 315, t: "NW" }
-    ];
-
-    const base = 360 * PX_PER_DEG;
-    band.dataset.base = String(base);
-    band.style.width = `${base * 3}px`;
-
-    const nGap =
-      COMPASS_LABEL_GAP_BASE_PX +
-      Math.max(0, "N".length - 1) * COMPASS_LABEL_GAP_PER_CHAR_PX;
-    const nGapLeft = nGap / 2;
-    const nGapRight = nGap / 2;
-
-    for (let k = -1; k <= 1; k++) {
-      const loopStart = base * (k + 1);
-      const loopEnd = base * (k + 2);
-      const labelSlots = labels
-        .map((it) => {
-          const gap =
-            COMPASS_LABEL_GAP_BASE_PX +
-            Math.max(0, it.t.length - 1) * COMPASS_LABEL_GAP_PER_CHAR_PX;
-          const gapLeft = gap / 2;
-          const gapRight = gap / 2;
-          return { pos: base + (it.d + 360 * k) * PX_PER_DEG, gapLeft, gapRight };
-        })
-        .sort((a, b) => a.pos - b.pos);
-
-      for (const it of labels) {
-        const x = base + (it.d + 360 * k) * PX_PER_DEG;
-        const el = document.createElement("div");
-        el.className = "fnv_compass_label";
-        el.style.left = `${x}px`;
-        el.textContent = it.t;
-        labelsEl.appendChild(el);
-      }
-
-      // Add a virtual N at the loop end to prevent wrap overlap (ticks/line).
-      labelSlots.push({ pos: loopEnd, gapLeft: nGapLeft, gapRight: nGapRight });
-      labelSlots.sort((a, b) => a.pos - b.pos);
-
-      let segStart = loopStart;
-      labelSlots.forEach(({ pos, gapLeft, gapRight }) => {
-        const segEnd = pos - gapLeft - 1;
-        if (segEnd > segStart) {
-          const seg = document.createElement("div");
-          seg.className = "fnv_compass_line_segment";
-          seg.style.left = `${segStart}px`;
-          seg.style.width = `${segEnd - segStart}px`;
-          band.appendChild(seg);
-        }
-        segStart = pos + gapRight + 1;
-      });
-      if (loopEnd > segStart) {
-        const seg = document.createElement("div");
-        seg.className = "fnv_compass_line_segment";
-        seg.style.left = `${segStart}px`;
-        seg.style.width = `${loopEnd - segStart}px`;
-        band.appendChild(seg);
-      }
-
-      for (let i = 0; i < 32; i++) {
-        const deg = i * 11.25;
-        const x = base + (deg + 360 * k) * PX_PER_DEG;
-        if (labelSlots.some(({ pos, gapLeft, gapRight }) => x >= pos - gapLeft && x <= pos + gapRight)) {
-          continue;
-        }
-        const tick = document.createElement("div");
-        tick.className = i % 2 === 0 ? "fnv_compass_tick big" : "fnv_compass_tick small";
-        tick.style.left = `${x}px`;
-        ticks.appendChild(tick);
-      }
-    }
-
-    return true;
-  }
-
-  let compassBuilt = false;
-
-  function cleanupCompassDom() {
-    document.querySelectorAll(".fnv_compass_strip").forEach((el) => el.remove());
-
-    const bands = Array.from(document.querySelectorAll(".fnv_compass_band"));
-    bands.forEach((el, idx) => {
-      if (idx > 0) el.remove();
-    });
-
-    const viewport = document.querySelector(".fnv_compass_viewport");
-    if (!viewport) return;
-
-    Array.from(viewport.children).forEach((child) => {
-      if (child.classList.contains("fnv_compass_center")) return;
-      if (child.classList.contains("fnv_compass_band")) return;
-      child.remove();
-    });
-
-    const band = bands[0] || viewport.querySelector(".fnv_compass_band");
-    if (!band) return;
-
-    document.querySelectorAll(".fnv_compass_label").forEach((el) => {
-      if (!band.contains(el)) el.remove();
-    });
-    document.querySelectorAll(".fnv_compass_tick").forEach((el) => {
-      if (!band.contains(el)) el.remove();
-    });
-  }
-
-  function ensureCompassBuilt() {
-    cleanupCompassDom();
-    const band = elCompassBand();
-    const labelsCount = band ? band.querySelectorAll(".fnv_compass_label").length : 0;
-    const ticksCount = band ? band.querySelectorAll(".fnv_compass_tick").length : 0;
-    if (compassBuilt && labelsCount === 24 && ticksCount === 96) return true;
-    const ok = buildCompassBand();
-    compassBuilt = ok;
-    return ok;
-  }
-
   function renderCompass() {
-    cleanupCompassDom();
-    const band = elCompassBand();
-    if (!band) return;
-
-    const labels = band.querySelectorAll(".fnv_compass_label");
-    const ticks = band.querySelectorAll(".fnv_compass_tick");
-    if (labels.length !== 24 || ticks.length !== 96) {
-      ensureCompassBuilt();
-    }
-
-    const base = Number(band.dataset.base || 0);
-    const shift = -(base + headingRenderNorm * PX_PER_DEG);
-    band.style.transform = `translate3d(${shift}px, 0, 0)`;
+    setCompassYaw(headingRenderUnwrapped);
   }
 
   function tickCompass() {
-    const delta = headingTargetUnwrapped - headingRenderUnwrapped;
+    if (headingRenderUnwrapped == null) {
+      headingRenderUnwrapped = headingTargetUnwrapped;
+    }
+    const delta = shortestDeltaDeg(headingRenderUnwrapped, headingTargetUnwrapped);
     if (Math.abs(delta) < 0.001) {
       headingRenderUnwrapped = headingTargetUnwrapped;
     } else {
-      headingRenderUnwrapped += delta * COMPASS_EASE;
+      headingRenderUnwrapped = normDeg(headingRenderUnwrapped + (delta * COMPASS_EASE));
     }
-    headingRenderNorm = normDeg(headingRenderUnwrapped);
     renderCompass();
 
-    if (headingRenderUnwrapped !== headingTargetUnwrapped) {
+    if (headingRenderUnwrapped != headingTargetUnwrapped) {
       compassRaf = requestAnimationFrame(tickCompass);
     } else {
       compassRaf = null;
@@ -756,15 +695,8 @@ import Events from "./Events";
 
   function setHeadingTarget(deg) {
     const h = normDeg(deg);
-    if (lastHeadingNorm === null) {
-      lastHeadingNorm = h;
-      headingTargetUnwrapped = h;
-    } else {
-      const delta = shortestDeltaDeg(lastHeadingNorm, h);
-      headingTargetUnwrapped += delta;
-      lastHeadingNorm = h;
-    }
-    headingTargetNorm = h;
+    headingTargetUnwrapped = h;
+    if (headingRenderUnwrapped == null) headingRenderUnwrapped = h;
     if (!compassRaf) compassRaf = requestAnimationFrame(tickCompass);
   }
 
@@ -1338,27 +1270,6 @@ Events.Subscribe("Container:TransferKey", (payload) => {
     setHeadingTarget(deg);
   });
 
-function snapTrackBackground(trackId) {
-  const el = document.getElementById(trackId);
-  if (!el) return;
-
-  const cs = getComputedStyle(el);
-  const tickW = parseFloat(cs.getPropertyValue("--tick-w")) || 8;
-  const gap = parseFloat(cs.getPropertyValue("--gap")) || 1;
-  const period = tickW + gap;
-
-  const w = el.clientWidth;
-  if (!w || w <= 0) return;
-
-  const full = Math.max(period, Math.floor(w / period) * period);
-  const remainder = w - full;
-
-  el.style.width = `${full}px`;
-  el.style.right = "auto";
-  el.style.marginRight = `${remainder}px`;
-  el.style.backgroundPositionX = "0px";
-}
-
 function ensureUiFocus() {
   if (document.body) {
     document.body.tabIndex = -1;
@@ -1385,7 +1296,7 @@ function ensureUiFocus() {
     uiInited = true;
     const pruneDuplicateDom = () => {
       const ids = [
-        "hud_hp_fallout",
+        "hudSvg",
         "hud_right_fnv",
         "fnv_dialog",
         "fnv_shop",
@@ -1404,47 +1315,87 @@ function ensureUiFocus() {
         });
       });
 
-      const compasses = document.querySelectorAll(".fnv_compass");
-      if (compasses.length > 1) {
-        compasses.forEach((el, idx) => {
-          if (idx === 0) return;
-          el.remove();
-        });
-      }
-
-      const bands = document.querySelectorAll(".fnv_compass_band");
-      if (bands.length > 1) {
-        bands.forEach((el, idx) => {
-          if (idx === 0) return;
-          el.remove();
-        });
-      }
-
-      const viewports = document.querySelectorAll(".fnv_compass_viewport");
-      if (viewports.length > 1) {
-        viewports.forEach((el, idx) => {
-          if (idx === 0) return;
-          el.remove();
-        });
-      }
     };
     pruneDuplicateDom();
     window.setInterval(pruneDuplicateDom, 500);
     ensureAdminConsoleReady();
     ensureUiFocus();
     window.addEventListener("mousedown", ensureUiFocus, true);
-    snapTrackBackground("hp_track");
-    snapTrackBackground("ap_track");
-    const ensureCompassReady = () => {
-      if (!elCompassBand() || !elCompassTicks() || !elCompassLabels()) {
-        window.setTimeout(ensureCompassReady, 100);
-        return;
-      }
-      ensureCompassBuilt();
-      renderCompass();
-      setHeadingTarget(0);
-    };
-    ensureCompassReady();
+    ensureHudSvgReady();
+    setHeadingTarget(0);
+
+    if (process.env.NODE_ENV === "development") {
+      const ensureDebugState = () => {
+        if (!lastHudState) {
+          lastHudState = {
+            hp: 100,
+            hp_max: 100,
+            ap: { now: 100, max: 100 },
+            ammo: { now: 15, reserve: 532 },
+            money: { caps: 0 },
+            equip: { armor: true, weapon: true },
+            cnd: { armor_pct: 100, weapon_pct: 100 },
+            _debugHeading: 0,
+          };
+          setState(lastHudState);
+        }
+        return lastHudState;
+      };
+
+      const updateDevOverlay = (state) => {
+        const el = document.getElementById("fnv_dev_keys_stats");
+        if (!el || !state) return;
+        const hp = Math.round(Number(state.hp ?? 0));
+        const max = Math.round(Number(state.hp_max ?? 0));
+        const yaw = Math.round(Number(state._debugHeading ?? 0));
+        el.textContent = `HP: ${hp}/${max} | YAW: ${yaw}`;
+      };
+
+      const handleDevKey = (event) => {
+        if (event.repeat) return;
+        const target = event.target;
+        if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
+          return;
+        }
+        const state = ensureDebugState();
+        if (!hudSvgState.doc && elHudSvgObject()?.contentDocument) {
+          initHudSvg();
+        }
+        const key = event.key.toLowerCase();
+        const code = event.code || "";
+        const isH = key === "h" || code === "KeyH";
+        const isY = key === "y" || code === "KeyY";
+        const isR = key === "r" || code === "KeyR";
+        const isT = key === "t" || code === "KeyT";
+        if (isH) {
+          const max = Number(state.hp_max ?? 100);
+          const now = Math.max(0, Number(state.hp ?? 0) - 5);
+          const next = { ...state, hp: now, hp_max: max };
+          updateDevOverlay(next);
+          setState(next);
+        } else if (isY) {
+          const max = Number(state.hp_max ?? 100);
+          const now = Math.min(max, Number(state.hp ?? 0) + 5);
+          const next = { ...state, hp: now, hp_max: max };
+          updateDevOverlay(next);
+          setState(next);
+        } else if (isR) {
+          const next = (Number(state._debugHeading ?? 0) + 15) % 360;
+          state._debugHeading = next;
+          updateDevOverlay(state);
+          setHeadingTarget(next);
+        } else if (isT) {
+          const next = (Number(state._debugHeading ?? 0) - 15 + 360) % 360;
+          state._debugHeading = next;
+          updateDevOverlay(state);
+          setHeadingTarget(next);
+        }
+      };
+
+      document.addEventListener("keydown", handleDevKey, true);
+      window.addEventListener("keydown", handleDevKey, true);
+      updateDevOverlay(ensureDebugState());
+    }
 
       window.setTimeout(() => {
         if (!stateReceived) {
@@ -1469,10 +1420,7 @@ function ensureUiFocus() {
     initHudUi();
   }
 
-  window.addEventListener("resize", () => {
-    snapTrackBackground("hp_track");
-    snapTrackBackground("ap_track");
-});
+
 
 /* ===================== */
 /* Dialogue + Shop Mode  */

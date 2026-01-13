@@ -1,0 +1,56 @@
+/* Centre Accran comme FNV */
+.fnv_interact{
+  position: fixed;
+  left: 50%;
+  top: 70%;            
+  transform: translateX(-50%);
+  z-index: 9997;
+
+  pointer-events: none;
+
+  color: var(--pip);
+  font-family: ui-monospace, Consolas, Menlo, Monaco, "Liberation Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  text-shadow: 0 0 2px rgba(255,182,66,0.18);
+
+  text-transform: none;
+
+  animation: fnv_prompt_fade 0.08s ease-out;
+
+  /* pas de fond moderne, juste lisible */
+  background: transparent;
+}
+
+@keyframes fnv_prompt_fade{
+  from{ opacity: 0; transform: translateX(-50%) translateY(2px); }
+  to{ opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* Ligne [E] INTERAGIR */
+.fnv_interact_line1{
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.fnv_interact_key{
+  opacity: 0.95;
+}
+
+.fnv_interact_action{
+  opacity: 0.95;
+}
+
+/* Nom PNJ en dessous */
+.fnv_interact_name{
+  margin-top: 4px;
+  text-align: center;
+  font-size: 20px;
+  line-height: 1;
+  opacity: 0.9;
+  /* FNV vibe : guillemets */
+}

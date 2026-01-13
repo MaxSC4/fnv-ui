@@ -1,0 +1,54 @@
+:root{
+  --pip: rgb(255,182,66);
+  --pip-dim: rgba(255,182,66,0.25);
+  --pip-dimmer: rgba(255,182,66,0.12);
+  --pip-green: #00ff66;
+  --pip-dark1: color-mix(in srgb, var(--pip) 70%, black);
+  --pip-dark2: color-mix(in srgb, var(--pip) 45%, black);
+  --pip-glow: color-mix(in srgb, var(--pip) 40%, transparent);
+  --pip-filter: brightness(0) saturate(100%) invert(82%) sepia(62%) saturate(510%) hue-rotate(353deg) brightness(102%) contrast(102%);
+  --pip-green-filter: brightness(0) saturate(100%) invert(66%) sepia(62%) saturate(523%) hue-rotate(79deg) brightness(96%) contrast(103%);
+  --pip-red: #ff3b3b;
+  --bg: rgba(0,0,0,0.0);
+  --panel: rgba(0,0,0,0.0);
+  --compass-color: var(--pip);
+  --hud-block-w: 576px;
+  --hud-block-h: 216px;
+}
+
+@font-face{
+  font-family: "Monofonto";
+  src: url("../fonts/monofonto.otf") format("opentype");
+  font-display: swap;
+}
+
+html, body, #root, .fnv_root{
+  width: 100%;
+  height: 100%;
+}
+
+body{
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+}
+
+.fnv_root{
+  position: relative;
+  width: 100%;
+  height: 100%;
+  color: var(--pip);
+}
+
+.fnv_root.fnv_dev_bg{
+  background-image: url("../assets/hud/fnv_background_ref.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+*, *::before, *::after{
+  box-sizing: border-box;
+}
+
+.fnv_hidden{ display:none !important; }

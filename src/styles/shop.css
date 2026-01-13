@@ -1,0 +1,492 @@
+/* ===================== */
+/* Shop FNV Panel        */
+/* ===================== */
+
+.fnv_shop{
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+
+  display: block;
+  pointer-events: auto;
+
+  color: var(--pip);
+  font-family: ui-monospace, Consolas, Menlo, Monaco, "Liberation Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  text-shadow: 0 0 4px rgba(255,182,66,0.16);
+
+  background: rgba(0,0,0,0.25);
+}
+
+.fnv_shop_frame{
+  position: absolute;
+  width: 78vw;
+  height: 62vh;
+  left: 50%;
+  top: 16vh;
+  transform: translateX(-50%);
+}
+
+.fnv_shop_panel{
+  position: absolute;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid var(--pip-dim);
+  padding: 10px 12px 12px;
+  box-sizing: border-box;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(0,0,0,0) 0,
+    rgba(0,0,0,0) 6px,
+    rgba(0,0,0,0.18) 7px
+  );
+}
+
+.fnv_shop_panel_left{
+  left: 0;
+  top: 0;
+  width: 38%;
+  height: 58%;
+}
+
+.fnv_shop_panel_right{
+  right: 0;
+  top: 0;
+  width: 38%;
+  height: 58%;
+}
+
+.fnv_shop_corner{
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  opacity: 0.9;
+}
+
+.fnv_shop_corner.tl{
+  left: -1px;
+  top: -1px;
+  border-left: 2px solid var(--pip);
+  border-top: 2px solid var(--pip);
+}
+
+.fnv_shop_corner.tr{
+  right: -1px;
+  top: -1px;
+  border-right: 2px solid var(--pip);
+  border-top: 2px solid var(--pip);
+}
+
+.fnv_shop_corner.bl{
+  left: -1px;
+  bottom: -1px;
+  border-left: 2px solid var(--pip);
+  border-bottom: 2px solid var(--pip);
+}
+
+.fnv_shop_corner.br{
+  right: -1px;
+  bottom: -1px;
+  border-right: 2px solid var(--pip);
+  border-bottom: 2px solid var(--pip);
+}
+
+.fnv_shop_header{
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.fnv_shop_title{
+  opacity: 0.95;
+}
+
+.fnv_shop_caps{
+  display: inline-flex;
+  gap: 8px;
+  opacity: 0.9;
+  align-items: center;
+}
+
+.fnv_shop_caps_icon{
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  filter: var(--pip-filter);
+}
+
+.fnv_shop_caps_label{
+  opacity: 0.85;
+}
+
+.fnv_shop_caps_value{
+  font-variant-numeric: tabular-nums;
+}
+
+.fnv_shop_list{
+  margin-top: 6px;
+  height: calc(100% - 26px);
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+.fnv_shop_row{
+  display: grid;
+  grid-template-columns: 16px 1fr 56px 64px;
+  align-items: center;
+  height: 24px;
+  padding: 0 6px 0 6px;
+  font-size: 14px;
+  opacity: 0.92;
+  cursor: default;
+  pointer-events: auto;
+}
+
+.fnv_shop_row_mark{
+  width: 16px;
+  text-align: center;
+  opacity: 0.95;
+  font-size: 12px;
+}
+
+.fnv_shop_row_name{
+  text-transform: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fnv_shop_row_selqty{
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}
+
+.fnv_shop_row_val{
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.fnv_shop_row.used{
+  opacity: 0.6;
+}
+
+.fnv_shop_row.disabled{
+  opacity: 0.3;
+}
+
+.fnv_shop_row.picked{
+  background: rgba(255,182,66,0.08);
+}
+
+.fnv_shop_row.selected{
+  background: var(--pip-dimmer);
+  color: rgba(255,214,140,0.95);
+}
+
+.fnv_shop_center{
+  position: absolute;
+  left: 50%;
+  top: 8%;
+  width: 10%;
+  height: 42%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.fnv_shop_arrow_block{
+  width: 100%;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.fnv_shop_arrow_amount{
+  font-size: 18px;
+  color: rgba(255,214,140,0.95);
+  line-height: 1.1;
+}
+
+.fnv_shop_arrow_label{
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.fnv_shop_arrow_graphic{
+  margin: 6px auto 0;
+  width: 80%;
+  height: 10px;
+  position: relative;
+}
+
+.fnv_shop_arrow_graphic::before{
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: 2px solid var(--pip);
+  transform: translateY(-50%);
+  opacity: 0.9;
+}
+
+.fnv_shop_arrow_right::after{
+  content: "";
+  position: absolute;
+  right: -2px;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-left: 8px solid var(--pip);
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  transform: translateY(-50%);
+}
+
+.fnv_shop_arrow_left::after{
+  content: "";
+  position: absolute;
+  left: -2px;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-right: 8px solid var(--pip);
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  transform: translateY(-50%);
+}
+
+.fnv_shop_confirm{
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  text-transform: none;
+  text-align: left;
+  animation: fnv_shop_confirm_in 180ms steps(3, end);
+  text-shadow: 0 0 6px rgba(255,182,66,0.35);
+  min-width: 360px;
+  max-width: 420px;
+}
+
+.fnv_shop_confirm_icon{
+  width: 104px;
+  height: 104px;
+  object-fit: contain;
+  filter: var(--pip-filter) drop-shadow(0 0 6px rgba(255,182,66,0.35));
+}
+
+.fnv_shop_confirm_text{
+  line-height: 1.2;
+  opacity: 0.95;
+  max-width: 260px;
+}
+
+@keyframes fnv_shop_confirm_in{
+  0%{ opacity: 0; transform: translateY(6px); filter: brightness(0.85); }
+  60%{ opacity: 1; transform: translateY(0); filter: brightness(1); }
+  80%{ opacity: 0.65; }
+  100%{ opacity: 1; }
+}
+
+.fnv_shop_itemcard{
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 34%;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid var(--pip-dim);
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: 18% 50% 32%;
+  gap: 10px;
+  box-sizing: border-box;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(0,0,0,0) 0,
+    rgba(0,0,0,0) 6px,
+    rgba(0,0,0,0.18) 7px
+  );
+}
+
+.fnv_shop_item_icon{
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 8px;
+  min-height: 100%;
+}
+
+.fnv_shop_item_icon img{
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  filter: var(--pip-filter);
+}
+
+.fnv_shop_item_info{
+  display: flex;
+  flex-direction: column;
+}
+
+.fnv_shop_item_name{
+  font-size: 18px;
+  color: rgba(255,214,140,0.95);
+  margin-bottom: 8px;
+}
+
+.fnv_shop_item_stats{
+  display: flex;
+  gap: 18px;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.fnv_shop_stat_label{
+  opacity: 0.85;
+  margin-right: 4px;
+}
+
+.fnv_shop_stat_value{
+  font-variant-numeric: tabular-nums;
+}
+
+.fnv_shop_item_desc{
+  font-size: 14px;
+  opacity: 0.95;
+  align-self: center;
+  justify-self: start;
+  text-align: left;
+  padding-left: 0;
+  line-height: 1.3;
+  text-transform: none;
+}
+
+.fnv_shop_actions{
+  position: absolute;
+  right: 0;
+  top: 58%;
+  height: 8%;
+  text-align: left;
+  font-size: 13px;
+  line-height: 1.6;
+  padding-right: 6px;
+  opacity: 0.95;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.fnv_shop_action{
+  white-space: nowrap;
+}
+
+.fnv_shop_qty{
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.35);
+  pointer-events: auto;
+}
+
+.fnv_shop_qty_panel{
+  width: 320px;
+  padding: 12px 14px;
+  border: 1px solid var(--pip);
+  background: rgba(0,0,0,0.65);
+  text-align: center;
+}
+
+.fnv_shop_qty_title{
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.fnv_shop_qty_value{
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 8px;
+}
+
+.fnv_shop_qty_range{
+  width: 100%;
+  margin: 6px 0 10px;
+  --qty-tick-gap: 10px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  height: 14px;
+}
+
+.fnv_shop_qty_range::-webkit-slider-runnable-track{
+  height: 6px;
+  border: 1px solid var(--pip-dim);
+  background-image: repeating-linear-gradient(
+    to right,
+    transparent 0,
+    transparent calc(var(--qty-tick-gap) - 1px),
+    rgba(255,182,66,0.65) calc(var(--qty-tick-gap) - 1px),
+    rgba(255,182,66,0.65) var(--qty-tick-gap)
+  );
+}
+
+.fnv_shop_qty_range::-webkit-slider-thumb{
+  -webkit-appearance: none;
+  width: 8px;
+  height: 16px;
+  background: var(--pip);
+  border: 1px solid var(--pip);
+  margin-top: -6px;
+}
+
+.fnv_shop_qty_range::-moz-range-track{
+  height: 6px;
+  border: 1px solid var(--pip-dim);
+  background-image: repeating-linear-gradient(
+    to right,
+    transparent 0,
+    transparent calc(var(--qty-tick-gap) - 1px),
+    rgba(255,182,66,0.65) calc(var(--qty-tick-gap) - 1px),
+    rgba(255,182,66,0.65) var(--qty-tick-gap)
+  );
+}
+
+.fnv_shop_qty_range::-moz-range-thumb{
+  width: 8px;
+  height: 16px;
+  background: var(--pip);
+  border: 1px solid var(--pip);
+  border-radius: 0;
+}
+
+.fnv_shop_qty_buttons,
+.fnv_shop_qty_actions{
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-top: 6px;
+}
+
+.fnv_shop_qty_btn{
+  border: 1px solid var(--pip-dim);
+  background: transparent;
+  color: var(--pip);
+  font-family: inherit;
+  text-transform: uppercase;
+  font-size: 12px;
+  padding: 4px 8px;
+  cursor: default;
+}
+
+.fnv_shop_qty_btn_primary{
+  border-color: var(--pip);
+}

@@ -1,0 +1,28 @@
+/* ===================== */
+/* RActicule              */
+/* ===================== */
+.fnv_reticle{
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+
+  z-index: 9996;
+  pointer-events: none;
+
+  color: var(--pip);
+  font-family: ui-monospace, Consolas, Menlo, Monaco, "Liberation Mono", monospace;
+  font-size: 18px;
+  line-height: 1;
+  letter-spacing: 0.2px;
+
+  text-shadow: 0 0 2px rgba(255,182,66,0.18);
+  opacity: 0.95;
+}
+
+.fnv_reticle{
+  transition: opacity 80ms linear;
+}
+.fnv_reticle.fnv_hidden{
+  opacity: 0;
+}

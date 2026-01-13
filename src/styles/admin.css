@@ -1,0 +1,61 @@
+/* ===================== */
+/* Admin Console         */
+/* ===================== */
+.fnv_admin{
+  position: fixed;
+  left: 50%;
+  bottom: 8%;
+  transform: translateX(-50%);
+  width: 520px;
+  z-index: 9999;
+
+  background: rgba(0,0,0,0.88);
+  border: 1px solid rgba(255,182,66,0.55);
+  box-shadow: none;
+  font-family: ui-monospace, Consolas, Menlo, Monaco, "Liberation Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--pip);
+}
+
+.fnv_admin_header{
+  display:flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255,182,66,0.25);
+  font-size: 12px;
+  opacity: 0.95;
+}
+
+.fnv_admin_hint{
+  opacity: 0.75;
+  font-size: 11px;
+}
+
+.fnv_admin_log{
+  max-height: 140px;
+  overflow: hidden;
+  padding: 6px 10px;
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.fnv_admin_line{
+  margin: 2px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fnv_admin_input{
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px;
+  background: rgba(0,0,0,0.95);
+  color: var(--pip);
+  border: none;
+  border-top: 1px solid rgba(255,182,66,0.25);
+  outline: none;
+  font-size: 14px;
+}
