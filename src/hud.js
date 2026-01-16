@@ -332,6 +332,10 @@ import Events from "./Events";
     itemNameClipWidth: null,
     rowBaseTransform: "",
     rowHeight: null,
+    rowHoverBaseHeight: null,
+    rowHoverSingleHeight: null,
+    rowGap: null,
+    itemNameScaleX: null,
     rows: [],
     weapons: [],
     listKey: "",
@@ -431,14 +435,47 @@ import Events from "./Events";
     invSvgState.rowTemplate = queryInvId("item_row_template");
     invSvgState.rowBaseTransform = invSvgState.rowTemplate?.getAttribute("transform") || "";
     invSvgState.itemNameClipId = queryInvId("clipPath1")?.getAttribute("id") || "";
-    const clipRect = queryInvId("rect1");
+    const clipRect = queryInvClipLabel("item_name_clip");
     const clipWidth = parseFloat(clipRect?.getAttribute("width") || "");
     invSvgState.itemNameClipWidth = Number.isFinite(clipWidth) ? clipWidth : null;
+    const nameTemplate = invSvgState.rowTemplate?.querySelector(
+      invSvgState.prefix ? `#${invSvgState.prefix}__item_name` : "#item_name"
+    );
+    if (nameTemplate) {
+      const transform = nameTemplate.getAttribute("transform") || "";
+      const match = transform.match(/matrix\(([^)]+)\)/);
+      if (match) {
+        const parts = match[1].split(/[,\s]+/).map((v) => Number(v)).filter(Number.isFinite);
+        if (parts.length === 6) {
+          const scaleX = parts[0];
+          if (Number.isFinite(scaleX) && scaleX > 0) invSvgState.itemNameScaleX = scaleX;
+        }
+      }
+    }
     if (invSvgState.itemScroll) invSvgState.itemScroll.style.pointerEvents = "auto";
 
     const hoverId = invSvgState.prefix ? `#${invSvgState.prefix}__hovered_box` : "#hovered_box";
     const hovered = invSvgState.rowTemplate?.querySelector(hoverId);
     const baseHeight = hovered ? parseFloat(hovered.getAttribute("height") || "0") : null;
+    if (Number.isFinite(baseHeight) && baseHeight > 0) {
+      invSvgState.rowHoverBaseHeight = baseHeight;
+      const tspanEls = nameTemplate ? Array.from(nameTemplate.children).filter((el) => el.tagName === "tspan") : [];
+      if (tspanEls.length >= 2) {
+        const y1 = Number(tspanEls[0].getAttribute("y"));
+        const y2 = Number(tspanEls[1].getAttribute("y"));
+        const transform = nameTemplate.getAttribute("transform") || "";
+        const match = transform.match(/matrix\(([^)]+)\)/);
+        const scaleY = match
+          ? Number(match[1].split(/[,\s]+/).map((v) => Number(v)).find((_, idx) => idx === 3))
+          : NaN;
+        if (Number.isFinite(y1) && Number.isFinite(y2) && Number.isFinite(scaleY)) {
+          const lineStep = (y2 - y1) * scaleY;
+          if (lineStep > 0) {
+            invSvgState.rowHoverSingleHeight = Math.max(0, baseHeight - lineStep);
+          }
+        }
+      }
+    }
     let rowHeight = null;
     if (Number.isFinite(baseHeight) && baseHeight > 0) {
       rowHeight = baseHeight;
@@ -447,8 +484,11 @@ import Events from "./Events";
       if (bb && Number.isFinite(bb.height) && bb.height > 0) rowHeight = bb.height;
     }
     if (rowHeight) {
-      const rowSpacing = 1.05;
+      const rowSpacing = 0.7;
       invSvgState.rowHeight = rowHeight * rowSpacing;
+    }
+    if (invSvgState.rowHoverBaseHeight && invSvgState.rowHeight) {
+      invSvgState.rowGap = Math.max(0, invSvgState.rowHeight - invSvgState.rowHoverBaseHeight);
     }
 
     if (invSvgState.rowTemplate) {
@@ -2691,14 +2731,30 @@ function toWeapon(item, state, index){
 }
 
   function updateInventoryRowPositions(){
-  if (!invSvgState.rowHeight) return;
-  invSvgState.rows.forEach((row, idx) => {
-    const y = (idx * invSvgState.rowHeight) - invSvgState.scrollOffset;
-    const translate = `translate(0 ${y.toFixed(SVG_ATTR_PRECISION)})`;
-    const base = invSvgState.rowBaseTransform;
-    row.root.setAttribute("transform", base ? `${base} ${translate}` : translate);
-  });
-}
+    if (!invSvgState.rowHeight) return;
+    let y = -invSvgState.scrollOffset;
+    invSvgState.rows.forEach((row) => {
+      const translate = `translate(0 ${y.toFixed(SVG_ATTR_PRECISION)})`;
+      const base = invSvgState.rowBaseTransform;
+      row.root.setAttribute("transform", base ? `${base} ${translate}` : translate);
+      y += row.rowHeight ?? invSvgState.rowHeight;
+    });
+  }
+
+  function updateInventoryScrollBounds(){
+    const frameHeight = parseFloat(invSvgState.itemFrame?.getAttribute("height") || "0");
+    if (!frameHeight || !invSvgState.rows.length) {
+      invSvgState.scrollMax = 0;
+      invSvgState.scrollOffset = 0;
+      return;
+    }
+    const totalHeight = invSvgState.rows.reduce(
+      (sum, row) => sum + (row.rowHeight ?? invSvgState.rowHeight ?? 0),
+      0
+    );
+    invSvgState.scrollMax = Math.max(0, totalHeight - frameHeight);
+    invSvgState.scrollOffset = clamp(invSvgState.scrollOffset, 0, invSvgState.scrollMax);
+  }
 
 function updateInventoryRowStates(){
   invSvgState.rows.forEach((row) => {
@@ -2707,10 +2763,10 @@ function updateInventoryRowStates(){
   });
 }
 
-function setInventoryRowName(row, text){
-  if (!row?.nameEl || !row?.hoveredEl) return;
-  const nameEl = row.nameEl;
-  const box = row.hoveredEl.getBBox?.();
+  function setInventoryRowName(row, text){
+    if (!row?.nameEl || !row?.hoveredEl) return;
+    const nameEl = row.nameEl;
+    const box = row.hoveredEl.getBBox?.();
   if (!box || !Number.isFinite(box.width)) {
     nameEl.textContent = text ?? "";
     return;
@@ -2731,21 +2787,50 @@ function setInventoryRowName(row, text){
 
   if (!raw) return;
 
-  const clipWidth = invSvgState.itemNameClipWidth;
-  const maxWidth = Math.max(0, (clipWidth || box.width));
+    const clipWidth = invSvgState.itemNameClipWidth;
+    const scaleX = invSvgState.itemNameScaleX || 1;
+    const maxWidth = Math.max(0, clipWidth ? (clipWidth / scaleX) : box.width);
 
-  tspans.forEach((tspan) => { tspan.textContent = ""; });
-  tspans[0].textContent = raw;
-  const fullLen = measureWidth();
-  if (fullLen <= maxWidth) {
+    tspans.forEach((tspan) => { tspan.textContent = ""; });
+    tspans[0].textContent = raw;
     if (tspans[1]) tspans[1].textContent = "";
-    return;
-  }
+    const fullLen = measureWidth();
+    let isTwoLines = false;
+    if (fullLen > maxWidth && tspans[1]) {
+      const words = raw.split(/\s+/).filter(Boolean);
+      let line1 = "";
+      let line2 = "";
+      for (let i = 0; i < words.length; i += 1) {
+        const candidate = line1 ? `${line1} ${words[i]}` : words[i];
+        tspans[0].textContent = candidate;
+        tspans[1].textContent = "";
+        if (measureWidth() <= maxWidth) {
+          line1 = candidate;
+          continue;
+        }
+        line2 = words.slice(i).join(" ");
+        break;
+      }
+      if (!line1) {
+        line1 = raw;
+        line2 = "";
+      }
+      tspans[0].textContent = line1;
+      tspans[1].textContent = line2;
+      isTwoLines = !!line2;
+    }
 
-  // Single-line only: keep everything on the first tspan and let the clip do its job.
-  tspans[0].textContent = raw;
-  if (tspans[1]) tspans[1].textContent = "";
-}
+    if (invSvgState.rowHoverBaseHeight && invSvgState.rowHoverSingleHeight && row.hoveredEl) {
+      const nextHeight = isTwoLines ? invSvgState.rowHoverBaseHeight : invSvgState.rowHoverSingleHeight;
+      row.hoveredEl.setAttribute("height", String(nextHeight));
+    }
+    if (invSvgState.rowGap != null) {
+      const baseHeight = isTwoLines ? invSvgState.rowHoverBaseHeight : invSvgState.rowHoverSingleHeight;
+      row.rowHeight = baseHeight + invSvgState.rowGap;
+      updateInventoryRowPositions();
+      updateInventoryScrollBounds();
+    }
+  }
 
 function updateInventoryDetail(weapon){
   if (!weapon) {
@@ -2873,18 +2958,19 @@ function renderInventorySvg(state){
 
       invSvgState.itemScroll.appendChild(clone);
       setInventoryRowName({ nameEl, hoveredEl }, weapon.name);
-      invSvgState.rows.push({
-        root: clone,
-        nameEl,
-        hoveredEl,
-        notEqEl,
-        eqEl,
-        weaponId: weapon.id
+        invSvgState.rows.push({
+          root: clone,
+          nameEl,
+          hoveredEl,
+          notEqEl,
+          eqEl,
+          weaponId: weapon.id,
+          rowHeight: invSvgState.rowHeight
+        });
       });
-    });
-  } else {
-    weapons.forEach((weapon, idx) => {
-      const row = invSvgState.rows[idx];
+    } else {
+      weapons.forEach((weapon, idx) => {
+        const row = invSvgState.rows[idx];
       if (!row) return;
       setInventoryRowName(row, weapon.name);
       if (row.eqEl) row.eqEl.style.opacity = weapon.equipped ? "1" : "0";
@@ -2896,15 +2982,7 @@ function renderInventorySvg(state){
   if (invState.index < 0) invState.index = 0;
   if (invState.index > weapons.length - 1) invState.index = Math.max(0, weapons.length - 1);
 
-  const frameHeight = parseFloat(invSvgState.itemFrame?.getAttribute("height") || "0");
-  if (invSvgState.rowHeight && frameHeight) {
-    const visibleRows = Math.max(1, Math.floor(frameHeight / invSvgState.rowHeight));
-    invSvgState.scrollMax = Math.max(0, (weapons.length - visibleRows) * invSvgState.rowHeight);
-    invSvgState.scrollOffset = clamp(invSvgState.scrollOffset, 0, invSvgState.scrollMax);
-  } else {
-    invSvgState.scrollMax = 0;
-    invSvgState.scrollOffset = 0;
-  }
+    updateInventoryScrollBounds();
 
   updateInventoryRowPositions();
   updateInventoryRowStates();
