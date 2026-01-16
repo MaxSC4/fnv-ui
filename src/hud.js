@@ -6,7 +6,8 @@ import Events from "./Events";
   /* ===================== */
   /* DOM Helpers           */
   /* ===================== */
-  const elHudSvgObject = () => document.getElementById("hudSvg");
+  const elHudLeft = () => document.getElementById("hud_hp_fallout");
+  const elHudLeftSvg = () => elHudLeft()?.querySelector("svg");
 
   const elCaps   = () => document.getElementById("caps_value");
   const elNotifs = () => document.getElementById("fnv_notify");
@@ -34,8 +35,14 @@ import Events from "./Events";
   const elAmmoTextSpan   = () => queryRightSubId("tspan45");
   const elCndArmorFill   = () => queryRightSubId("rect15");
   const elCndArmorEmpty  = () => queryRightSubId("rect14");
+  const elCndArmorLabel  = () => queryRightSubId("text69");
+  const elCndArmorChevronTop = () => queryRightSubId("g24");
+  const elCndArmorChevronBottom = () => queryRightSubId("g35");
   const elCndWeaponFill  = () => queryRightSubId("rect37");
   const elCndWeaponEmpty = () => queryRightSubId("rect36");
+  const elCndWeaponLabel = () => queryRightSubId("text70");
+  const elCndWeaponChevronTop = () => queryRightSubId("g38");
+  const elCndWeaponChevronBottom = () => queryRightSubId("g39");
   const elMicOpen        = () => document.getElementById("mic_open");
   const elMicOpenGlow    = () => document.getElementById("mic_open_glow");
   const elMicClosed      = () => document.getElementById("mic_closed");
@@ -74,15 +81,13 @@ import Events from "./Events";
     return Math.max(a, Math.min(b, n));
   }
 
-  const COMPASS_STRIP_CYCLES = 3;
-
-  function parseTranslateX(value) {
-    if (!value) return 0;
-    const match = String(value).match(/translate\(\s*([-0-9.]+)/);
-    if (!match) return 0;
-    const parsed = parseFloat(match[1]);
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
+  const HP_CLIP_FULL_WIDTH = 129.65158; // rect120 width in hp_compass_bar.svg
+  const HP_CLIP_FULL_X = 7.5124135; // rect120 x in hp_compass_bar.svg
+  const HP_CLIP_ANCHOR_RIGHT = false; // set true to keep the right edge fixed
+  const COMPASS_PERIOD = 427.566051; // distance between compass cycles in hp_compass_bar.svg
+  const COMPASS_RAW_SIGN = -1; // flip to +1 if compass movement is inverted
+  const SVG_ATTR_PRECISION = 4; // reduce attribute churn while preserving SVG fidelity
+  const DOM_EPSILON = 1e-4; // skip redundant DOM writes
 
   function setRectFillWidth(rect, pct) {
     if (!rect) return;
@@ -116,58 +121,45 @@ import Events from "./Events";
   };
 
   const hudSvgState = {
-    doc: null,
+    root: null,
     hpTicksGroup: null,
     hpClipRect: null,
     hpClipBaseWidth: null,
+    hpClipBaseX: null,
+    hpLastWidth: null,
+    hpLastX: null,
     hpLowTimer: null,
     compassStripContent: null,
-    compassUnitsPerDeg: null,
-    compassPxPerDeg: null
+    compassLastOffset: null
   };
 
-  function initHudSvg() {
-    const obj = elHudSvgObject();
-    if (!obj) return;
-    const svgDoc = obj.getSVGDocument();
-    if (!svgDoc) return;
-    hudSvgState.doc = svgDoc;
+  function initHudSvg(event) {
+    const eventRoot = event?.detail?.root;
+    const svgRoot = eventRoot?.querySelector?.("svg") || elHudLeftSvg();
+    if (!svgRoot) return;
+    hudSvgState.root = svgRoot;
 
-    const ticks = svgDoc.getElementById("hp_ticks_fill");
+    const ticks = svgRoot.querySelector("#hp_ticks_fill");
     hudSvgState.hpTicksGroup = ticks || null;
-    if (ticks) {
-      const clipRef = ticks.getAttribute("clip-path") || "";
-      const clipIdMatch = clipRef.match(/#([^)]+)/);
-      const clipId = clipIdMatch ? clipIdMatch[1] : null;
-      const clipPath = clipId ? svgDoc.getElementById(clipId) : null;
-      const clipRect = clipPath ? clipPath.querySelector("rect") : null;
-      hudSvgState.hpClipRect = clipRect || null;
-      if (clipRect) {
-        const base = parseFloat(clipRect.getAttribute("width") || "0");
-        hudSvgState.hpClipBaseWidth = Number.isFinite(base) ? base : 0;
-      }
-    }
 
-    const stripContent = svgDoc.getElementById("compass_strip_content");
+    const clipRect = svgRoot.querySelector("#rect120");
+    hudSvgState.hpClipRect = clipRect || null;
+    hudSvgState.hpClipBaseWidth = HP_CLIP_FULL_WIDTH;
+    hudSvgState.hpClipBaseX = HP_CLIP_FULL_X;
+    hudSvgState.hpLastWidth = null;
+    hudSvgState.hpLastX = null;
+
+    const stripContent = svgRoot.querySelector("#compass_strip_content");
     hudSvgState.compassStripContent = stripContent || null;
+    hudSvgState.compassLastOffset = null;
     if (process.env.NODE_ENV === "development" && !stripContent) {
       console.log("[HUD] compass ids missing", { strip: !!stripContent });
     }
-    if (stripContent) {
-      requestAnimationFrame(() => {
-        const bb = stripContent.getBBox?.();
-        if (bb && Number.isFinite(bb.width) && bb.width > 0) {
-          const oneCycleW = bb.width / COMPASS_STRIP_CYCLES;
-          hudSvgState.compassUnitsPerDeg = oneCycleW / 360;
-          hudSvgState.compassPxPerDeg = hudSvgState.compassUnitsPerDeg;
-          if (process.env.NODE_ENV === "development") {
-            stripContent.setAttribute("transform", "translate(-5 0)");
-            setTimeout(() => {
-              stripContent.setAttribute("transform", "translate(0 0)");
-            }, 60);
-          }
-        }
-      });
+    if (stripContent && process.env.NODE_ENV === "development") {
+      stripContent.setAttribute("transform", "translate(-5 0)");
+      setTimeout(() => {
+        stripContent.setAttribute("transform", "translate(0 0)");
+      }, 60);
     }
 
     if (lastHudState) {
@@ -181,16 +173,31 @@ import Events from "./Events";
   }
 
   function ensureHudSvgReady() {
-    const obj = elHudSvgObject();
-    if (!obj) return;
-    obj.addEventListener("load", initHudSvg);
-    if (obj.contentDocument) initHudSvg();
+    window.addEventListener("FNV:LeftHudReady", initHudSvg);
+    if (elHudLeftSvg()) initHudSvg();
   }
 
   function setHpTicks(pct01) {
     if (!hudSvgState.hpClipRect || hudSvgState.hpClipBaseWidth == null) return;
     const safe = clamp(pct01, 0, 1);
-    hudSvgState.hpClipRect.setAttribute("width", String(hudSvgState.hpClipBaseWidth * safe));
+    const baseWidth = hudSvgState.hpClipBaseWidth ?? HP_CLIP_FULL_WIDTH;
+    const width = Number((baseWidth * safe).toFixed(SVG_ATTR_PRECISION));
+    const baseX = hudSvgState.hpClipBaseX ?? HP_CLIP_FULL_X;
+    const nextX = HP_CLIP_ANCHOR_RIGHT
+      ? Number((baseX + (baseWidth - width)).toFixed(SVG_ATTR_PRECISION))
+      : baseX;
+
+    if (hudSvgState.hpLastWidth == null || Math.abs(width - hudSvgState.hpLastWidth) > DOM_EPSILON) {
+      hudSvgState.hpClipRect.setAttribute("width", String(width));
+      hudSvgState.hpLastWidth = width;
+    }
+
+    if (HP_CLIP_ANCHOR_RIGHT) {
+      if (hudSvgState.hpLastX == null || Math.abs(nextX - hudSvgState.hpLastX) > DOM_EPSILON) {
+        hudSvgState.hpClipRect.setAttribute("x", String(nextX));
+        hudSvgState.hpLastX = nextX;
+      }
+    }
   }
 
   function setHpLowState(isLow) {
@@ -217,11 +224,16 @@ import Events from "./Events";
 
   function setCompassYaw(deg) {
     const strip = hudSvgState.compassStripContent;
-    const pxPerDeg = hudSvgState.compassPxPerDeg;
-    if (!strip || !pxPerDeg) return;
+    if (!strip) return;
     const yaw = normDeg(deg);
-    const tx = -(yaw * pxPerDeg);
-    strip.setAttribute("transform", `translate(${tx} 0)`);
+    const rawOffset = (COMPASS_RAW_SIGN * yaw * COMPASS_PERIOD) / 360;
+    const wrapped = ((rawOffset % COMPASS_PERIOD) + COMPASS_PERIOD) % COMPASS_PERIOD;
+    // Keep the strip in [-PERIOD, 0) so the cycles loop seamlessly.
+    const finalOffset = wrapped - COMPASS_PERIOD;
+    if (hudSvgState.compassLastOffset == null || Math.abs(finalOffset - hudSvgState.compassLastOffset) > DOM_EPSILON) {
+      hudSvgState.compassLastOffset = finalOffset;
+      strip.setAttribute("transform", `translate(${finalOffset} 0)`);
+    }
   }
 
   function getApTickCount() {
@@ -343,12 +355,18 @@ import Events from "./Events";
     setCondVisible(
       armorVisible,
       elCndArmorFill(),
-      elCndArmorEmpty()
+      elCndArmorEmpty(),
+      elCndArmorLabel(),
+      elCndArmorChevronTop(),
+      elCndArmorChevronBottom()
     );
     setCondVisible(
       weaponVisible,
       elCndWeaponFill(),
-      elCndWeaponEmpty()
+      elCndWeaponEmpty(),
+      elCndWeaponLabel(),
+      elCndWeaponChevronTop(),
+      elCndWeaponChevronBottom()
     );
 
     if (armorVisible) {
@@ -1358,7 +1376,7 @@ function ensureUiFocus() {
           return;
         }
         const state = ensureDebugState();
-        if (!hudSvgState.doc && elHudSvgObject()?.contentDocument) {
+        if (!hudSvgState.root && elHudLeftSvg()) {
           initHudSvg();
         }
         const key = event.key.toLowerCase();

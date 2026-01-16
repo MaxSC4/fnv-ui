@@ -24,3 +24,5 @@ yarn-error.log*
 
 deploy.ps1
 src/assets/hud/fnv_background_ref.png
+*.md
+!README.md

@@ -24,8 +24,8 @@
   position: fixed;
   left: 24px;
   bottom: 18px;
-  width: var(--hud-block-w, 576px);
-  height: var(--hud-block-h, 216px);
+  width: var(--hud-block-w, 360px);
+  height: var(--hud-block-h, 136px);
   pointer-events: none;
   color: var(--pip);
   display: block;
@@ -35,13 +35,18 @@
     drop-shadow(0 0 8px color-mix(in srgb, var(--pip) 20%, transparent));
 }
 
+.hudLeft svg {
+  width: 100%;
+  height: 100%;
+}
+
 /* Right HUD position: tweak --hudRight/--hudBottom (margins) and --pip (color) */
 #hud_right_fnv{
   position: fixed;
   right: var(--hudRight, 24px);
   bottom: var(--hudBottom, 24px);
-  width: min(var(--hud-block-w, 576px), calc(100vw - 24px));
-  height: var(--hud-block-h, 216px);
+  width: min(var(--hud-block-w, 360px), calc(100vw - 24px));
+  height: var(--hud-block-h, 136px);
   color: var(--pip);
   font-family: ui-monospace, Consolas, Menlo, Monaco, "Liberation Mono", monospace;
   text-transform: uppercase;

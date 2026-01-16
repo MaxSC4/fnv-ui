@@ -1,31 +1,16 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo } from "react";
+import rightSubBarSvg from "./assets/hud/right_sub_bar_svg";
 
 export default function RightSubBar() {
-  const [svgMarkup, setSvgMarkup] = useState("");
   const uid = useMemo(() => {
     const raw = (crypto?.randomUUID?.() || Math.random().toString(36).slice(2));
     return `rsb_${raw.replace(/[^a-zA-Z0-9_-]/g, "")}`;
   }, []);
-  const svgUrl = `${process.env.PUBLIC_URL || ""}/assets/hud/right_sub_bar.svg`;
+  const svgMarkup = useMemo(() => prefixSvgIds(rightSubBarSvg || "", uid), [uid]);
 
   useEffect(() => {
-    let cancelled = false;
-    fetch(svgUrl)
-      .then((res) => res.text())
-      .then((text) => {
-        if (cancelled) return;
-        const prefixed = prefixSvgIds(text || "", uid);
-        setSvgMarkup(prefixed);
-        window.dispatchEvent(new Event("FNV:RightSubBarReady"));
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setSvgMarkup("");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [svgUrl, uid]);
+    window.dispatchEvent(new Event("FNV:RightSubBarReady"));
+  }, []);
 
   return (
     <div

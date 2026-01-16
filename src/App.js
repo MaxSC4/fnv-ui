@@ -24,8 +24,6 @@ function App() {
 
   const rootClassName =
     process.env.NODE_ENV === "development" ? "fnv_root fnv_dev_bg" : "fnv_root";
-  const hudSvgUrl = `${process.env.PUBLIC_URL || ""}/assets/hud/hp_compass_bar.svg`;
-
   const showDevKeys = process.env.NODE_ENV === "development";
 
   return (
@@ -36,7 +34,7 @@ function App() {
       <EnemyHud />
       <InventoryPanel />
       <RepairMenu />
-      <LeftHud hudSvgUrl={hudSvgUrl} />
+      <LeftHud />
       <RightHud />
       <Notifications />
       <InteractPrompt />

@@ -12,8 +12,8 @@
   --bg: rgba(0,0,0,0.0);
   --panel: rgba(0,0,0,0.0);
   --compass-color: var(--pip);
-  --hud-block-w: 576px;
-  --hud-block-h: 216px;
+  --hud-block-w: 360px;
+  --hud-block-h: 136px;
 }
 
 @font-face{
