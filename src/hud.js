@@ -85,7 +85,8 @@ import Events from "./Events";
   const HP_CLIP_FULL_X = 7.5124135; // rect120 x in hp_compass_bar.svg
   const HP_CLIP_ANCHOR_RIGHT = false; // set true to keep the right edge fixed
   const COMPASS_PERIOD = 427.566051; // distance between compass cycles in hp_compass_bar.svg
-  const COMPASS_RAW_SIGN = -1; // flip to +1 if compass movement is inverted
+  const COMPASS_BASE_OFFSET = 44.340181; // fallback if N label alignment markers are missing
+  const COMPASS_RAW_SIGN = 1; // flip to +1 if compass movement is inverted
   const SVG_ATTR_PRECISION = 4; // reduce attribute churn while preserving SVG fidelity
   const DOM_EPSILON = 1e-4; // skip redundant DOM writes
 
@@ -130,6 +131,7 @@ import Events from "./Events";
     hpLastX: null,
     hpLowTimer: null,
     compassStripContent: null,
+    compassBaseOffset: null,
     compassLastOffset: null
   };
 
@@ -152,8 +154,20 @@ import Events from "./Events";
     const stripContent = svgRoot.querySelector("#compass_strip_content");
     hudSvgState.compassStripContent = stripContent || null;
     hudSvgState.compassLastOffset = null;
+    hudSvgState.compassBaseOffset = COMPASS_BASE_OFFSET;
     if (process.env.NODE_ENV === "development" && !stripContent) {
       console.log("[HUD] compass ids missing", { strip: !!stripContent });
+    }
+    if (stripContent) {
+      const chevron = svgRoot.querySelector("#COMPASS_CHEVRON");
+      const markN = svgRoot.querySelector("#mark_N");
+      const chevronBox = chevron?.getBBox?.();
+      const markBox = markN?.getBBox?.();
+      if (chevronBox && markBox && Number.isFinite(chevronBox.x) && Number.isFinite(markBox.x)) {
+        const chevronX = chevronBox.x + (Number(chevronBox.width) || 0) / 2;
+        const markX = markBox.x + (Number(markBox.width) || 0) / 2;
+        hudSvgState.compassBaseOffset = Number((chevronX - markX).toFixed(SVG_ATTR_PRECISION));
+      }
     }
     if (stripContent && process.env.NODE_ENV === "development") {
       stripContent.setAttribute("transform", "translate(-5 0)");
@@ -226,10 +240,12 @@ import Events from "./Events";
     const strip = hudSvgState.compassStripContent;
     if (!strip) return;
     const yaw = normDeg(deg);
-    const rawOffset = (COMPASS_RAW_SIGN * yaw * COMPASS_PERIOD) / 360;
-    const wrapped = ((rawOffset % COMPASS_PERIOD) + COMPASS_PERIOD) % COMPASS_PERIOD;
-    // Keep the strip in [-PERIOD, 0) so the cycles loop seamlessly.
-    const finalOffset = wrapped - COMPASS_PERIOD;
+    const baseOffset = hudSvgState.compassBaseOffset ?? COMPASS_BASE_OFFSET;
+    const rawOffset = baseOffset + (COMPASS_RAW_SIGN * yaw * COMPASS_PERIOD) / 360;
+    const halfPeriod = COMPASS_PERIOD / 2;
+    const wrapped = (((rawOffset + halfPeriod) % COMPASS_PERIOD) + COMPASS_PERIOD) % COMPASS_PERIOD;
+    // Keep the strip centered in [-PERIOD/2, +PERIOD/2) to minimize drift.
+    const finalOffset = wrapped - halfPeriod;
     if (hudSvgState.compassLastOffset == null || Math.abs(finalOffset - hudSvgState.compassLastOffset) > DOM_EPSILON) {
       hudSvgState.compassLastOffset = finalOffset;
       strip.setAttribute("transform", `translate(${finalOffset} 0)`);
