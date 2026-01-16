@@ -334,6 +334,10 @@ import Events from "./Events";
     rowHeight: null,
     rowHoverBaseHeight: null,
     rowHoverSingleHeight: null,
+    condBarGroup: null,
+    condBarEmpty: null,
+    condBarFull: null,
+    condBarChevrons: null,
     rowGap: null,
     itemNameScaleX: null,
     rows: [],
@@ -523,6 +527,10 @@ import Events from "./Events";
     invSvgState.dtText = queryInvId("DT_text_to_modify");
     invSvgState.drText = queryInvId("DR_text_to_modify");
     invSvgState.capsText = queryInvId("CAPS_text_to_modify");
+    invSvgState.condBarGroup = queryInvId("cond_bar");
+    invSvgState.condBarEmpty = queryInvId("cond_bar_empty");
+    invSvgState.condBarFull = queryInvId("cond_bar_full");
+    invSvgState.condBarChevrons = queryInvId("chevrons");
 
     if (invSvgState.effectsText) {
       cacheSvgTextBase(invSvgState.effectsText);
@@ -2206,6 +2214,28 @@ const elShopQtyModal = () => document.getElementById("fnv_shop_qty");
 const elShopQtyRange = () => document.getElementById("fnv_shop_qty_range");
 const elShopQtyValue = () => document.getElementById("fnv_shop_qty_value");
 
+function updateInventoryCondBar(item) {
+  const barGroup = invSvgState.condBarGroup;
+  const barEmpty = invSvgState.condBarEmpty;
+  const barFull = invSvgState.condBarFull;
+  const chevrons = invSvgState.condBarChevrons;
+  if (!barGroup && !barEmpty && !barFull && !chevrons) return;
+
+  const cnd = Number(item?.cnd ?? item?.condition);
+  const max = Number(item?.max_cnd ?? item?.max_condition);
+  const hasCnd = Number.isFinite(cnd) && Number.isFinite(max) && max > 0;
+
+  setCondVisible(hasCnd, barGroup, barEmpty, barFull, chevrons);
+  if (!hasCnd) {
+    setCondCritical(barFull, false);
+    return;
+  }
+
+  const pct = (cnd / max) * 100;
+  setRectFillWidth(barFull, pct);
+  setCondCritical(barFull, pct < 10);
+}
+
 let shopState = null;
 let shopQtyState = null;
 let shopQtyBound = false;
@@ -2706,22 +2736,24 @@ function toWeapon(item, state, index){
   const equippedId = state?.equipped?.weapon_instance_id;
   const equipped = !!item?.equipped || (item?.instance_id != null && item.instance_id === equippedId);
     const iconUrl = item?.iconUrl ?? item?.item_icon ?? item?.icon_url ?? item?.icon ?? "";
-  const effectsRaw = item?.effects ?? item?.effects_text ?? item?.effect;
+    const effectsRaw = item?.effects ?? item?.effects_text ?? item?.effect;
   const effects = Array.isArray(effectsRaw)
     ? effectsRaw.map((e) => String(e))
     : String(effectsRaw ?? "").split("\n").filter(Boolean);
   const uniqueId = `${id || "item"}:${item?.instance_id ?? item?.stack_key ?? index ?? 0}`;
-  return {
-    id: uniqueId,
-    name,
-    ammoText,
-    equipped,
-    iconUrl,
-    dps: item?.dps ?? item?.damage_per_second,
-    vw: item?.vw ?? item?.value_over_weight,
-    dt: item?.dt ?? item?.damage_threshold,
-    dr: item?.dr ?? item?.damage_resistance,
-    deg: item?.deg ?? item?.damage,
+    return {
+      id: uniqueId,
+      name,
+      ammoText,
+      equipped,
+      iconUrl,
+      dps: item?.dps ?? item?.damage_per_second,
+      vw: item?.vw ?? item?.value_over_weight,
+      cnd: item?.cnd ?? item?.condition,
+      max_cnd: item?.max_cnd ?? item?.max_condition,
+      dt: item?.dt ?? item?.damage_threshold,
+      dr: item?.dr ?? item?.damage_resistance,
+      deg: item?.deg ?? item?.damage,
     str: item?.str ?? item?.strength,
     weight: item?.weight ?? item?.wg,
     value: item?.value ?? item?.val,
@@ -2832,19 +2864,20 @@ function updateInventoryRowStates(){
     }
   }
 
-function updateInventoryDetail(weapon){
-  if (!weapon) {
-    setSvgText(invSvgState.ammoText, "");
-    setSvgText(invSvgState.dpsText, "");
-    setSvgText(invSvgState.vwText, "");
-    setSvgText(invSvgState.weightText, "");
-    setSvgText(invSvgState.valText, "");
-    setSvgText(invSvgState.strText, "");
-    setSvgText(invSvgState.degText, "");
-    setSvgFlowText(invSvgState.effectsText, "");
-    setSvgImageHref(invSvgState.iconImage, "");
-    return;
-  }
+  function updateInventoryDetail(weapon){
+    if (!weapon) {
+      setSvgText(invSvgState.ammoText, "");
+      setSvgText(invSvgState.dpsText, "");
+      setSvgText(invSvgState.vwText, "");
+      setSvgText(invSvgState.weightText, "");
+      setSvgText(invSvgState.valText, "");
+      setSvgText(invSvgState.strText, "");
+      setSvgText(invSvgState.degText, "");
+      setSvgFlowText(invSvgState.effectsText, "");
+      setSvgImageHref(invSvgState.iconImage, "");
+      updateInventoryCondBar(null);
+      return;
+    }
 
   setSvgText(invSvgState.ammoText, weapon.ammoText ?? "—");
   setSvgText(invSvgState.dpsText, weapon.dps ?? "—");
@@ -2854,14 +2887,15 @@ function updateInventoryDetail(weapon){
   setSvgText(invSvgState.strText, weapon.str ?? "—");
   setSvgText(invSvgState.degText, weapon.deg ?? "—");
 
-  if (Array.isArray(weapon.effects) && weapon.effects.length > 0) {
-    setSvgFlowText(invSvgState.effectsText, weapon.effects);
-  } else {
-    setSvgFlowText(invSvgState.effectsText, "");
-  }
+    if (Array.isArray(weapon.effects) && weapon.effects.length > 0) {
+      setSvgFlowText(invSvgState.effectsText, weapon.effects);
+    } else {
+      setSvgFlowText(invSvgState.effectsText, "");
+    }
 
-  setSvgImageHref(invSvgState.iconImage, weapon.iconUrl || "");
-}
+    setSvgImageHref(invSvgState.iconImage, weapon.iconUrl || "");
+    updateInventoryCondBar(weapon);
+  }
 
 function updateInventoryTopStats(state){
   const pdsState = state?.player_stats?.pds;
