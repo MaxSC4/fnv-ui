@@ -281,6 +281,23 @@ import Events from "./Events";
     }
   }
 
+  function applyIconClipLayout(iconEl, clipLabel) {
+    if (!iconEl) return;
+    const clipRect = queryInvClipLabel(clipLabel);
+    if (!clipRect) return;
+    const rectX = Number(clipRect.getAttribute("x"));
+    const rectY = Number(clipRect.getAttribute("y"));
+    const rectW = Number(clipRect.getAttribute("width"));
+    const rectH = Number(clipRect.getAttribute("height"));
+    if (![rectX, rectY, rectW, rectH].every(Number.isFinite)) return;
+    iconEl.setAttribute("x", `${rectX}`);
+    iconEl.setAttribute("y", `${rectY}`);
+    iconEl.setAttribute("width", `${rectW}`);
+    iconEl.setAttribute("height", `${rectH}`);
+    iconEl.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    iconEl.classList?.add("inv_item_icon");
+  }
+
 
   const apTickState = {
     current: null,
@@ -449,6 +466,18 @@ import Events from "./Events";
     invSvgState.degText = queryInvId("DEG_text_to_modify");
     invSvgState.effectsText = queryInvId("effets_text_to_modify");
     invSvgState.iconImage = queryInvId("item_icon");
+    if (!invSvgState.iconImage) {
+      const clipRect = queryInvClipLabel("item_icon_clip");
+      if (clipRect?.ownerSVGElement) {
+        const iconId = invSvgState.prefix ? `${invSvgState.prefix}__item_icon` : "item_icon";
+        const imageEl = document.createElementNS("http://www.w3.org/2000/svg", "image");
+        imageEl.setAttribute("id", iconId);
+        imageEl.style.display = "none";
+        const parent = clipRect.parentElement || clipRect.ownerSVGElement;
+        parent.insertBefore(imageEl, clipRect.nextSibling);
+        invSvgState.iconImage = imageEl;
+      }
+    }
 
     invSvgState.pdsText = queryInvId("PDS_text_to_modify");
     invSvgState.dtText = queryInvId("DT_text_to_modify");
@@ -482,6 +511,8 @@ import Events from "./Events";
     anchorTextToClipRight(invSvgState.weightText, "WEIGHT_clip");
     anchorTextToClipRight(invSvgState.degText, "DEG_clip");
     anchorTextToClipRight(invSvgState.valText, "VAL_clip");
+
+    applyIconClipLayout(invSvgState.iconImage, "item_icon_clip");
 
 
     bindInventorySvgInteractions();
@@ -2634,7 +2665,7 @@ function toWeapon(item, state, index){
   const ammoText = String(item?.ammoText ?? item?.ammo_text ?? item?.ammo ?? "—");
   const equippedId = state?.equipped?.weapon_instance_id;
   const equipped = !!item?.equipped || (item?.instance_id != null && item.instance_id === equippedId);
-  const iconUrl = item?.iconUrl ?? item?.icon_url ?? item?.icon ?? "";
+    const iconUrl = item?.iconUrl ?? item?.item_icon ?? item?.icon_url ?? item?.icon ?? "";
   const effectsRaw = item?.effects ?? item?.effects_text ?? item?.effect;
   const effects = Array.isArray(effectsRaw)
     ? effectsRaw.map((e) => String(e))
