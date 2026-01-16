@@ -113,6 +113,175 @@ import Events from "./Events";
     el.classList.toggle("cond_critical", !!critical);
   }
 
+  function setSvgText(el, value) {
+    if (!el) return;
+    const text = value == null ? "" : String(value);
+    const tspans = el.querySelectorAll ? el.querySelectorAll("tspan") : null;
+    if (tspans && tspans.length > 0) {
+      tspans.forEach((tspan, idx) => {
+        tspan.textContent = idx === 0 ? text : "";
+      });
+      return;
+    }
+    el.textContent = text;
+  }
+
+  function setSvgMultilineText(el, lines) {
+    if (!el) return;
+    const text = Array.isArray(lines) ? lines : String(lines || "").split("\n");
+    const x = el.getAttribute("x") || "0";
+    const y = el.getAttribute("y") || "0";
+    while (el.firstChild) el.removeChild(el.firstChild);
+    text.filter((line) => line !== "").forEach((line, idx) => {
+      const tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+      tspan.setAttribute("x", x);
+      if (idx === 0) {
+        tspan.setAttribute("y", y);
+      } else {
+        tspan.setAttribute("dy", "1.2em");
+      }
+      tspan.textContent = line;
+      el.appendChild(tspan);
+    });
+  }
+
+  function cacheSvgTextBase(el) {
+    if (!el || el.dataset.baseX || el.dataset.baseY) return;
+    const first = el.querySelector("tspan");
+    if (!first) return;
+    const baseX = first.getAttribute("x") || "";
+    const baseY = first.getAttribute("y") || "";
+    if (baseX) el.dataset.baseX = baseX;
+    if (baseY) el.dataset.baseY = baseY;
+  }
+
+  function setSvgFlowText(el, lines) {
+    if (!el) return;
+    const text = Array.isArray(lines) ? lines : String(lines || "").split("\n");
+    const align = el.dataset.align || "start";
+    const anchor = align === "end" ? "end" : "start";
+    el.setAttribute("text-anchor", anchor);
+
+    while (el.firstChild) el.removeChild(el.firstChild);
+    const filtered = text.filter((line) => line !== "");
+    if (!filtered.length) return;
+    filtered.forEach((line, idx) => {
+      const tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+      if (idx > 0) tspan.setAttribute("dy", "1.2em");
+      tspan.textContent = line;
+      el.appendChild(tspan);
+    });
+  }
+
+  function setSvgImageHref(el, href) {
+    if (!el) return;
+    const url = href ? normalizeIconHref(String(href)) : "";
+    if (!url) {
+      el.removeAttribute("href");
+      el.removeAttributeNS("http://www.w3.org/1999/xlink", "href");
+      el.style.display = "none";
+      return;
+    }
+    el.setAttribute("href", url);
+    el.setAttributeNS("http://www.w3.org/1999/xlink", "href", url);
+    el.style.display = "";
+  }
+
+  function normalizeIconHref(href) {
+    const trimmed = (href || "").trim();
+    if (!trimmed) return "";
+    if (/^(data:|https?:|file:)/i.test(trimmed)) return trimmed;
+    if (trimmed.startsWith("icons/")) return trimmed;
+    return `icons/${trimmed.replace(/^\/+/, "")}`;
+  }
+
+  function stripSvgIds(root) {
+    if (!root) return;
+    if (root.hasAttribute && root.hasAttribute("id")) root.removeAttribute("id");
+    const withIds = root.querySelectorAll ? root.querySelectorAll("[id]") : [];
+    withIds.forEach((el) => el.removeAttribute("id"));
+  }
+
+  function getInvPrefix() {
+    return invSvgState.root?.dataset?.prefix || "";
+  }
+
+  function invSvgRoot() {
+    return invSvgState.svg || invSvgState.root || null;
+  }
+
+  function queryInvId(id) {
+    const svg = invSvgState.svg;
+    if (!svg) return null;
+    const prefix = getInvPrefix();
+    const targetId = prefix ? `${prefix}__${id}` : id;
+    return svg.querySelector(`#${targetId}`);
+  }
+
+  function getClipPathIdByRectId(rectId) {
+    const rect = queryInvId(rectId) || queryInvClipLabel(rectId);
+    const parent = rect?.parentElement;
+    if (!parent || parent.tagName !== "clipPath") return "";
+    return parent.getAttribute("id") || "";
+  }
+
+  function queryInvClipLabel(label) {
+    const root = invSvgRoot();
+    if (!root || !label) return null;
+    const selector = `[inkscape\\:label="${label}"]`;
+    return root.querySelector(selector);
+  }
+
+  function applyTextClip(textEl, rectId, anchorEnd = false) {
+    if (!textEl) return;
+    if (anchorEnd) {
+      textEl.setAttribute("text-anchor", "end");
+      const tspans = textEl.querySelectorAll ? textEl.querySelectorAll("tspan") : null;
+      if (tspans && tspans.length > 0) {
+        tspans.forEach((tspan) => tspan.setAttribute("text-anchor", "end"));
+      }
+    }
+    const clipId = getClipPathIdByRectId(rectId);
+    if (!clipId) return;
+    textEl.setAttribute("clip-path", `url(#${clipId})`);
+  }
+
+  function anchorTextToClipRight(textEl, clipLabel) {
+    if (!textEl) return;
+    const clipRect = queryInvClipLabel(clipLabel);
+    if (!clipRect) return;
+    const rectX = Number(clipRect.getAttribute("x"));
+    const rectW = Number(clipRect.getAttribute("width"));
+    if (!Number.isFinite(rectX) || !Number.isFinite(rectW)) return;
+    const rightEdgeSvg = rectX + rectW;
+    const tspans = textEl.querySelectorAll ? textEl.querySelectorAll("tspan") : null;
+    const baseX = Number((tspans?.[0]?.getAttribute("x")) || textEl.getAttribute("x") || 0);
+    if (!Number.isFinite(baseX)) return;
+    let rightEdgeLocal = rightEdgeSvg;
+    const transform = textEl.getAttribute("transform") || "";
+    const match = transform.match(/matrix\(([^)]+)\)/);
+    if (match) {
+      const parts = match[1].split(/[,\s]+/).map((v) => Number(v)).filter(Number.isFinite);
+      if (parts.length === 6) {
+        const [a, b, c, d, e, f] = parts;
+        const det = (a * d) - (b * c);
+        if (det) {
+          const invA = d / det;
+          const invB = -b / det;
+          const invC = -c / det;
+          const invE = (c * f - d * e) / det;
+          const localX = (invA * rightEdgeSvg) + (invC * 0) + invE;
+          if (Number.isFinite(localX)) rightEdgeLocal = localX;
+        }
+      }
+    }
+    const dx = rightEdgeLocal - baseX;
+    if (tspans && tspans.length > 0) {
+      tspans.forEach((tspan) => tspan.setAttribute("dx", `${dx}`));
+    }
+  }
+
+
   const apTickState = {
     current: null,
     target: null,
@@ -133,6 +302,46 @@ import Events from "./Events";
     compassStripContent: null,
     compassBaseOffset: null,
     compassLastOffset: null
+  };
+
+  const invSvgState = {
+    root: null,
+    svg: null,
+    prefix: "",
+    itemScroll: null,
+    itemFrame: null,
+    rowTemplate: null,
+    itemNameClipId: "",
+    itemNameClipWidth: null,
+    rowBaseTransform: "",
+    rowHeight: null,
+    rows: [],
+    weapons: [],
+    listKey: "",
+    scrollOffset: 0,
+    scrollMax: 0,
+    selectedId: null,
+    hoverId: null,
+    bound: false,
+    ammoText: null,
+    dpsText: null,
+    vwText: null,
+    weightText: null,
+    valText: null,
+    strText: null,
+    degText: null,
+    effectsText: null,
+    iconImage: null,
+    pdsText: null,
+    dtText: null,
+    drText: null,
+    capsText: null
+  };
+
+  const invUiState = {
+    open: false,
+    category: "OBJETS",
+    subPage: "ARMES"
   };
 
   function initHudSvg(event) {
@@ -189,6 +398,102 @@ import Events from "./Events";
   function ensureHudSvgReady() {
     window.addEventListener("FNV:LeftHudReady", initHudSvg);
     if (elHudLeftSvg()) initHudSvg();
+  }
+
+  function initInventorySvg(event) {
+    const root = event?.detail?.root || document.getElementById("fnv_inventory");
+    if (!root) return;
+    const svg = root.querySelector("svg");
+    if (!svg) return;
+    invSvgState.root = root;
+    invSvgState.svg = svg;
+    invSvgState.prefix = root.dataset?.prefix || "";
+
+    invSvgState.itemScroll = queryInvId("item_scroll");
+    invSvgState.itemFrame = queryInvId("item_frame");
+    invSvgState.rowTemplate = queryInvId("item_row_template");
+    invSvgState.rowBaseTransform = invSvgState.rowTemplate?.getAttribute("transform") || "";
+    invSvgState.itemNameClipId = queryInvId("clipPath1")?.getAttribute("id") || "";
+    const clipRect = queryInvId("rect1");
+    const clipWidth = parseFloat(clipRect?.getAttribute("width") || "");
+    invSvgState.itemNameClipWidth = Number.isFinite(clipWidth) ? clipWidth : null;
+    if (invSvgState.itemScroll) invSvgState.itemScroll.style.pointerEvents = "auto";
+
+    const hoverId = invSvgState.prefix ? `#${invSvgState.prefix}__hovered_box` : "#hovered_box";
+    const hovered = invSvgState.rowTemplate?.querySelector(hoverId);
+    const baseHeight = hovered ? parseFloat(hovered.getAttribute("height") || "0") : null;
+    let rowHeight = null;
+    if (Number.isFinite(baseHeight) && baseHeight > 0) {
+      rowHeight = baseHeight;
+    } else {
+      const bb = invSvgState.rowTemplate?.getBBox?.();
+      if (bb && Number.isFinite(bb.height) && bb.height > 0) rowHeight = bb.height;
+    }
+    if (rowHeight) {
+      const rowSpacing = 1.05;
+      invSvgState.rowHeight = rowHeight * rowSpacing;
+    }
+
+    if (invSvgState.rowTemplate) {
+      invSvgState.rowTemplate.style.display = "none";
+      invSvgState.rowTemplate.setAttribute("display", "none");
+      invSvgState.rowTemplate.style.pointerEvents = "none";
+    }
+
+    invSvgState.ammoText = queryInvId("ammo_text_to_modify");
+    invSvgState.dpsText = queryInvId("DPS_text_to_modify");
+    invSvgState.vwText = queryInvId("value_over_weight_text_to_modify");
+    invSvgState.weightText = queryInvId("weight_text_to_modify");
+    invSvgState.valText = queryInvId("VAL_text_to_modify");
+    invSvgState.strText = queryInvId("STR_text_to_modify");
+    invSvgState.degText = queryInvId("DEG_text_to_modify");
+    invSvgState.effectsText = queryInvId("effets_text_to_modify");
+    invSvgState.iconImage = queryInvId("item_icon");
+
+    invSvgState.pdsText = queryInvId("PDS_text_to_modify");
+    invSvgState.dtText = queryInvId("DT_text_to_modify");
+    invSvgState.drText = queryInvId("DR_text_to_modify");
+    invSvgState.capsText = queryInvId("CAPS_text_to_modify");
+
+    if (invSvgState.effectsText) {
+      cacheSvgTextBase(invSvgState.effectsText);
+      invSvgState.effectsText.dataset.align = "end";
+    }
+
+    applyTextClip(invSvgState.pdsText, "PDS_clip", true);
+    applyTextClip(invSvgState.drText, "DR_clip", true);
+    applyTextClip(invSvgState.dtText, "DT_clip", true);
+    applyTextClip(invSvgState.capsText, "CAPS_clip", true);
+    applyTextClip(invSvgState.vwText, "value_over_weight_clip", true);
+    applyTextClip(invSvgState.strText, "STR_clip", true);
+    applyTextClip(invSvgState.dpsText, "DPS_clip", true);
+    applyTextClip(invSvgState.weightText, "WEIGHT_clip", true);
+    applyTextClip(invSvgState.degText, "DEG_clip", true);
+    applyTextClip(invSvgState.valText, "VAL_clip", true);
+    applyTextClip(invSvgState.effectsText, "EFFETS_clip", false);
+
+    anchorTextToClipRight(invSvgState.pdsText, "PDS_clip");
+    anchorTextToClipRight(invSvgState.drText, "DR_clip");
+    anchorTextToClipRight(invSvgState.dtText, "DT_clip");
+    anchorTextToClipRight(invSvgState.capsText, "CAPS_clip");
+    anchorTextToClipRight(invSvgState.vwText, "value_over_weight_clip");
+    anchorTextToClipRight(invSvgState.strText, "STR_clip");
+    anchorTextToClipRight(invSvgState.dpsText, "DPS_clip");
+    anchorTextToClipRight(invSvgState.weightText, "WEIGHT_clip");
+    anchorTextToClipRight(invSvgState.degText, "DEG_clip");
+    anchorTextToClipRight(invSvgState.valText, "VAL_clip");
+
+
+    bindInventorySvgInteractions();
+
+    if (invState.data?.open) {
+      renderInventory(invState.data);
+    }
+  }
+
+  function ensureInventorySvgReady() {
+    window.addEventListener("FNV:InventoryReady", initInventorySvg);
+    if (document.getElementById("fnv_inventory")?.querySelector("svg")) initInventorySvg();
   }
 
   function setHpTicks(pct01) {
@@ -1356,6 +1661,7 @@ function ensureUiFocus() {
     ensureUiFocus();
     window.addEventListener("mousedown", ensureUiFocus, true);
     ensureHudSvgReady();
+    ensureInventorySvgReady();
     setHeadingTarget(0);
 
     if (process.env.NODE_ENV === "development") {
@@ -2312,6 +2618,290 @@ function renderShop(state){
   }
 }
 
+/* ===================== */
+/* Inventory SVG         */
+/* ===================== */
+function getWeaponCategory(categories){
+  const preferred = ["weapons", "weapon", "armes", "armement"];
+  if (!Array.isArray(categories)) return null;
+  return preferred.find((key) => categories.includes(key)) || categories[0] || null;
+}
+
+function toWeapon(item, state, index){
+  const idRaw = item?.id ?? item?.item_id ?? item?.instance_id ?? index;
+  const id = String(idRaw ?? index);
+  const name = String(item?.name ?? item?.item_id ?? "—");
+  const ammoText = String(item?.ammoText ?? item?.ammo_text ?? item?.ammo ?? "—");
+  const equippedId = state?.equipped?.weapon_instance_id;
+  const equipped = !!item?.equipped || (item?.instance_id != null && item.instance_id === equippedId);
+  const iconUrl = item?.iconUrl ?? item?.icon_url ?? item?.icon ?? "";
+  const effectsRaw = item?.effects ?? item?.effects_text ?? item?.effect;
+  const effects = Array.isArray(effectsRaw)
+    ? effectsRaw.map((e) => String(e))
+    : String(effectsRaw ?? "").split("\n").filter(Boolean);
+  const uniqueId = `${id || "item"}:${item?.instance_id ?? item?.stack_key ?? index ?? 0}`;
+  return {
+    id: uniqueId,
+    name,
+    ammoText,
+    equipped,
+    iconUrl,
+    dps: item?.dps ?? item?.damage_per_second,
+    vw: item?.vw ?? item?.value_over_weight,
+    dt: item?.dt ?? item?.damage_threshold,
+    dr: item?.dr ?? item?.damage_resistance,
+    deg: item?.deg ?? item?.damage,
+    str: item?.str ?? item?.strength,
+    weight: item?.weight ?? item?.wg,
+    value: item?.value ?? item?.val,
+    description: item?.desc ?? item?.description,
+    effects
+  };
+}
+
+  function updateInventoryRowPositions(){
+  if (!invSvgState.rowHeight) return;
+  invSvgState.rows.forEach((row, idx) => {
+    const y = (idx * invSvgState.rowHeight) - invSvgState.scrollOffset;
+    const translate = `translate(0 ${y.toFixed(SVG_ATTR_PRECISION)})`;
+    const base = invSvgState.rowBaseTransform;
+    row.root.setAttribute("transform", base ? `${base} ${translate}` : translate);
+  });
+}
+
+function updateInventoryRowStates(){
+  invSvgState.rows.forEach((row) => {
+    const hovered = row.weaponId && row.weaponId === invSvgState.hoverId;
+    if (row.hoveredEl) row.hoveredEl.style.opacity = hovered ? "1" : "0";
+  });
+}
+
+function setInventoryRowName(row, text){
+  if (!row?.nameEl || !row?.hoveredEl) return;
+  const nameEl = row.nameEl;
+  const box = row.hoveredEl.getBBox?.();
+  if (!box || !Number.isFinite(box.width)) {
+    nameEl.textContent = text ?? "";
+    return;
+  }
+
+  const measureWidth = () => {
+    const bb = nameEl.getBBox?.();
+    if (bb && Number.isFinite(bb.width)) return bb.width;
+    return 0;
+  };
+
+  const raw = String(text ?? "");
+  const tspans = Array.from(nameEl.children).filter((el) => el.tagName === "tspan");
+  if (!tspans.length) {
+    nameEl.textContent = raw;
+    return;
+  }
+
+  if (!raw) return;
+
+  const clipWidth = invSvgState.itemNameClipWidth;
+  const maxWidth = Math.max(0, (clipWidth || box.width));
+
+  tspans.forEach((tspan) => { tspan.textContent = ""; });
+  tspans[0].textContent = raw;
+  const fullLen = measureWidth();
+  if (fullLen <= maxWidth) {
+    if (tspans[1]) tspans[1].textContent = "";
+    return;
+  }
+
+  // Single-line only: keep everything on the first tspan and let the clip do its job.
+  tspans[0].textContent = raw;
+  if (tspans[1]) tspans[1].textContent = "";
+}
+
+function updateInventoryDetail(weapon){
+  if (!weapon) {
+    setSvgText(invSvgState.ammoText, "");
+    setSvgText(invSvgState.dpsText, "");
+    setSvgText(invSvgState.vwText, "");
+    setSvgText(invSvgState.weightText, "");
+    setSvgText(invSvgState.valText, "");
+    setSvgText(invSvgState.strText, "");
+    setSvgText(invSvgState.degText, "");
+    setSvgFlowText(invSvgState.effectsText, "");
+    setSvgImageHref(invSvgState.iconImage, "");
+    return;
+  }
+
+  setSvgText(invSvgState.ammoText, weapon.ammoText ?? "—");
+  setSvgText(invSvgState.dpsText, weapon.dps ?? "—");
+  setSvgText(invSvgState.vwText, weapon.vw ?? "—");
+  setSvgText(invSvgState.weightText, weapon.weight ?? "—");
+  setSvgText(invSvgState.valText, weapon.value ?? "—");
+  setSvgText(invSvgState.strText, weapon.str ?? "—");
+  setSvgText(invSvgState.degText, weapon.deg ?? "—");
+
+  if (Array.isArray(weapon.effects) && weapon.effects.length > 0) {
+    setSvgFlowText(invSvgState.effectsText, weapon.effects);
+  } else {
+    setSvgFlowText(invSvgState.effectsText, "");
+  }
+
+  setSvgImageHref(invSvgState.iconImage, weapon.iconUrl || "");
+}
+
+function updateInventoryTopStats(state){
+  const pdsState = state?.player_stats?.pds;
+  const cur = pdsState?.current ?? state?.carry_weight?.current ?? state?.pds?.current ?? state?.pds;
+  const max = pdsState?.max ?? state?.carry_weight?.max ?? state?.pds?.max;
+  const fmtInt = (val) => Math.round(Number(val));
+  const pds = (cur != null && max != null)
+    ? `${fmtInt(cur)}/${fmtInt(max)}`
+    : (cur != null ? fmtInt(cur) : "--");
+  setSvgText(invSvgState.pdsText, pds);
+
+  const dt = state?.player_stats?.dt ?? state?.dt ?? state?.stats?.dt ?? state?.resistance?.dt;
+  const dr = state?.player_stats?.dr ?? state?.dr ?? state?.stats?.dr ?? state?.resistance?.dr;
+  setSvgText(invSvgState.dtText, dt ?? "--");
+  setSvgText(invSvgState.drText, dr ?? "--");
+
+  const caps = state?.money?.caps ?? state?.caps ?? 0;
+  setSvgText(invSvgState.capsText, Math.floor(Number(caps)));
+}
+
+function renderInventorySvg(state){
+  if (!invSvgState.rowTemplate || !invSvgState.itemScroll) {
+    updateInventoryTopStats(state);
+    return;
+  }
+
+  const categories = getInvCategories(state);
+  const preferredCat = getWeaponCategory(categories);
+  if (!invState.category || !categories.includes(invState.category)) {
+    invState.category = preferredCat;
+  }
+
+  const selection = normalizeInvSelection(state);
+  invState.category = selection.category;
+  invState.index = selection.index;
+
+  invUiState.open = true;
+  invUiState.category = "OBJETS";
+  invUiState.subPage = selection.category ? String(selection.category).toUpperCase() : "ARMES";
+  if (invSvgState.root) {
+    invSvgState.root.dataset.category = invUiState.category;
+    invSvgState.root.dataset.subpage = invUiState.subPage;
+  }
+
+  const weapons = selection.items.map((item, idx) => toWeapon(item, state, idx));
+  invSvgState.weapons = weapons;
+
+  const listKey = weapons.map((w) => w.id).join("|");
+  const needsRebuild = listKey !== invSvgState.listKey || invSvgState.rows.length !== weapons.length;
+
+  if (needsRebuild) {
+    invSvgState.rows.forEach((row) => row.root.remove());
+    invSvgState.rows = [];
+    invSvgState.scrollOffset = 0;
+    invSvgState.hoverId = null;
+
+    weapons.forEach((weapon, idx) => {
+      const clone = invSvgState.rowTemplate.cloneNode(true);
+      const prefix = invSvgState.prefix ? `${invSvgState.prefix}__` : "";
+      const nameEl = clone.querySelector(`#${prefix}item_name`);
+      const hoveredEl = clone.querySelector(`#${prefix}hovered_box`);
+      const notEqEl = clone.querySelector(`#${prefix}rect35`);
+      const eqEl = clone.querySelector(`#${prefix}equipped`);
+
+      if (nameEl) {
+        nameEl.classList.add("inv_item_name");
+        if (invSvgState.itemNameClipId) {
+          nameEl.setAttribute("clip-path", `url(#${invSvgState.itemNameClipId})`);
+        }
+      }
+      if (hoveredEl) hoveredEl.style.opacity = "0";
+      if (eqEl) eqEl.style.opacity = weapon.equipped ? "1" : "0";
+      if (notEqEl) notEqEl.style.opacity = weapon.equipped ? "0" : "1";
+
+      stripSvgIds(clone);
+      clone.style.display = "";
+      clone.removeAttribute("display");
+      clone.style.pointerEvents = "auto";
+
+      clone.addEventListener("mouseenter", () => {
+        invSvgState.hoverId = weapon.id;
+        updateInventoryRowStates();
+      });
+      clone.addEventListener("mouseleave", () => {
+        if (invSvgState.hoverId === weapon.id) invSvgState.hoverId = null;
+        updateInventoryRowStates();
+      });
+      clone.addEventListener("click", () => {
+        invState.index = idx;
+        invSvgState.selectedId = weapon.id;
+        updateInventoryDetail(invSvgState.weapons[idx]);
+        updateInventoryRowStates();
+      });
+
+      invSvgState.itemScroll.appendChild(clone);
+      setInventoryRowName({ nameEl, hoveredEl }, weapon.name);
+      invSvgState.rows.push({
+        root: clone,
+        nameEl,
+        hoveredEl,
+        notEqEl,
+        eqEl,
+        weaponId: weapon.id
+      });
+    });
+  } else {
+    weapons.forEach((weapon, idx) => {
+      const row = invSvgState.rows[idx];
+      if (!row) return;
+      setInventoryRowName(row, weapon.name);
+      if (row.eqEl) row.eqEl.style.opacity = weapon.equipped ? "1" : "0";
+      if (row.notEqEl) row.notEqEl.style.opacity = weapon.equipped ? "0" : "1";
+    });
+  }
+
+  invSvgState.listKey = listKey;
+  if (invState.index < 0) invState.index = 0;
+  if (invState.index > weapons.length - 1) invState.index = Math.max(0, weapons.length - 1);
+
+  const frameHeight = parseFloat(invSvgState.itemFrame?.getAttribute("height") || "0");
+  if (invSvgState.rowHeight && frameHeight) {
+    const visibleRows = Math.max(1, Math.floor(frameHeight / invSvgState.rowHeight));
+    invSvgState.scrollMax = Math.max(0, (weapons.length - visibleRows) * invSvgState.rowHeight);
+    invSvgState.scrollOffset = clamp(invSvgState.scrollOffset, 0, invSvgState.scrollMax);
+  } else {
+    invSvgState.scrollMax = 0;
+    invSvgState.scrollOffset = 0;
+  }
+
+  updateInventoryRowPositions();
+  updateInventoryRowStates();
+
+  const selected = weapons[invState.index];
+  invSvgState.selectedId = selected?.id ?? null;
+  updateInventoryDetail(selected);
+  updateInventoryTopStats(state);
+}
+
+function bindInventorySvgInteractions(){
+  if (invSvgState.bound) return;
+  invSvgState.bound = true;
+  const target = invSvgState.itemScroll || invSvgState.svg;
+  if (!target) return;
+  target.addEventListener("wheel", (e) => {
+    if (!invSvgState.rowHeight || invSvgState.scrollMax <= 0) return;
+    const dir = e.deltaY > 0 ? 1 : -1;
+    invSvgState.scrollOffset = clamp(
+      invSvgState.scrollOffset + (dir * invSvgState.rowHeight),
+      0,
+      invSvgState.scrollMax
+    );
+    updateInventoryRowPositions();
+    e.preventDefault();
+  }, { passive: false });
+}
+
 function showShopConfirmFromTx(state){
   const confirmEl = elShopConfirm();
   const textEl = elShopConfirmText();
@@ -2975,12 +3565,18 @@ function renderInventory(state){
   if (!state?.open) {
     invEl.classList.add("fnv_hidden");
     invState.open = false;
+    invUiState.open = false;
     return;
   }
 
   if (uiMode !== "inventory") setMode({ mode: "inventory" });
   invState.open = true;
   ensureUiFocus();
+
+  if (invSvgState.root) {
+    renderInventorySvg(state);
+    return;
+  }
 
   if (invState.page !== "items" && invState.page !== "stats") invState.page = "items";
   setInvPage(invState.page);
@@ -3083,6 +3679,20 @@ document.addEventListener("keydown", (e) => {
 
 // Keybinds inventory
 document.addEventListener("keydown", (e) => {
+  if (e.code === "Tab" || e.key === "Tab") {
+    const active = document.activeElement;
+    const typing = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA");
+    if (typing) return;
+    if (uiMode === "dialog" || uiMode === "shop") return;
+    if (invState?.open) {
+      Events.Call("Inv:CloseRequest", {});
+    } else if (invState?.data) {
+      renderInventory({ ...invState.data, open: true });
+    }
+    e.preventDefault();
+    return;
+  }
+
   if (!invState?.open) return;
   if (repairMenuState.open) return;
   const active = document.activeElement;
