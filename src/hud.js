@@ -360,7 +360,7 @@ import Events from "./Events";
     iconImage: null,
     pdsText: null,
     dtText: null,
-    drText: null,
+    hpText: null,
     capsText: null
   };
 
@@ -534,7 +534,7 @@ import Events from "./Events";
 
     invSvgState.pdsText = queryInvId("PDS_text_to_modify");
     invSvgState.dtText = queryInvId("DT_text_to_modify");
-    invSvgState.drText = queryInvId("DR_text_to_modify");
+    invSvgState.hpText = queryInvId("HP_text_to_modify");
     invSvgState.capsText = queryInvId("CAPS_text_to_modify");
     invSvgState.condBarGroup = queryInvId("cond_bar");
     invSvgState.condBarEmpty = queryInvId("cond_bar_empty");
@@ -547,7 +547,7 @@ import Events from "./Events";
     }
 
     applyTextClip(invSvgState.pdsText, "PDS_clip", true);
-    applyTextClip(invSvgState.drText, "DR_clip", true);
+    applyTextClip(invSvgState.hpText, "HP_clip", true);
     applyTextClip(invSvgState.dtText, "DT_clip", true);
     applyTextClip(invSvgState.capsText, "CAPS_clip", true);
     applyTextClip(invSvgState.vwText, "value_over_weight_clip", true);
@@ -559,7 +559,7 @@ import Events from "./Events";
     applyTextClip(invSvgState.effectsText, "EFFETS_clip", false);
 
     anchorTextToClipRight(invSvgState.pdsText, "PDS_clip");
-    anchorTextToClipRight(invSvgState.drText, "DR_clip");
+    anchorTextToClipRight(invSvgState.hpText, "HP_clip");
     anchorTextToClipRight(invSvgState.dtText, "DT_clip");
     anchorTextToClipRight(invSvgState.capsText, "CAPS_clip");
     anchorTextToClipRight(invSvgState.vwText, "value_over_weight_clip");
@@ -2918,7 +2918,9 @@ function updateInventoryRowStates(){
   setSvgText(invSvgState.weightText, weapon.weight ?? "—");
   setSvgText(invSvgState.valText, weapon.value ?? "—");
   setSvgText(invSvgState.strText, weapon.str ?? "—");
-  setSvgText(invSvgState.degText, weapon.deg ?? "—");
+  const showArmor = invUiState.subPage === "ARMURE";
+  const degValue = showArmor ? (weapon.dt ?? "—") : (weapon.deg ?? "—");
+  setSvgText(invSvgState.degText, degValue);
   const mag = Number(weapon.ammoMag);
   const reserve = Number(weapon.ammoReserve);
   const hasAmmoCounts = Number.isFinite(mag) && Number.isFinite(reserve);
@@ -2949,10 +2951,16 @@ function updateInventoryTopStats(state){
     : (cur != null ? fmtInt(cur) : "--");
   setSvgText(invSvgState.pdsText, pds);
 
+  const hpState = state?.player_stats?.hp ?? state?.hp;
+  const hpCur = hpState?.current ?? state?.hp ?? state?.hp_current;
+  const hpMax = hpState?.max ?? state?.hp_max;
+  const hpText = (hpCur != null && hpMax != null)
+    ? `${Math.round(Number(hpCur))}/${Math.round(Number(hpMax))}`
+    : (hpCur != null ? Math.round(Number(hpCur)) : "--");
+  setSvgText(invSvgState.hpText, hpText);
+
   const dt = state?.player_stats?.dt ?? state?.dt ?? state?.stats?.dt ?? state?.resistance?.dt;
-  const dr = state?.player_stats?.dr ?? state?.dr ?? state?.stats?.dr ?? state?.resistance?.dr;
   setSvgText(invSvgState.dtText, dt ?? "--");
-  setSvgText(invSvgState.drText, dr ?? "--");
 
   const caps = state?.money?.caps ?? state?.caps ?? 0;
   setSvgText(invSvgState.capsText, Math.floor(Number(caps)));
@@ -3564,6 +3572,31 @@ function applyInventorySubPageVisibility(){
   const strGroup = queryInvId("STR");
   setCondVisible(showDps, dpsGroup);
   setCondVisible(showStr, strGroup);
+  const degGroup = queryInvId("DEG");
+  if (degGroup) {
+    const forceVisible = (el, visible) => {
+      if (!el) return;
+      el.style.display = visible ? "inline" : "none";
+      el.setAttribute("display", visible ? "inline" : "none");
+      el.style.opacity = visible ? "1" : "0";
+      el.setAttribute("opacity", visible ? "1" : "0");
+      el.style.visibility = visible ? "visible" : "hidden";
+      el.setAttribute("visibility", visible ? "visible" : "hidden");
+    };
+    const degLabel = degGroup.querySelector(
+      '[inkscape\\:label="DEG_DONT_MODIFY"],[id$="DEG_DONT_MODIFY"]'
+    );
+    const dtLabel = degGroup.querySelector(
+      '[inkscape\\:label="DT_DONT_MODIFY"],[id$="DT_DONT_MODIFY"]'
+    );
+    if (subPage === "ARMURE") {
+      forceVisible(degLabel, false);
+      forceVisible(dtLabel, true);
+    } else {
+      forceVisible(degLabel, true);
+      forceVisible(dtLabel, false);
+    }
+  }
 
   const selectedMap = {
     ARMES: "armes_selected_box",
