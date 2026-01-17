@@ -3566,13 +3566,19 @@ function renderInvList(state, selection){
 
 function applyInventorySubPageVisibility(){
   const subPage = invUiState.subPage || "ARMES";
-  const showDps = subPage !== "ARMURE";
-  const showStr = subPage !== "ARMURE";
+  const showDps = subPage === "ARMES";
+  const showStr = subPage === "ARMES";
   const dpsGroup = queryInvId("DPS");
   const strGroup = queryInvId("STR");
   setCondVisible(showDps, dpsGroup);
   setCondVisible(showStr, strGroup);
+  const hideForSoins = subPage === "SOINS";
+  const cndGroup = queryInvId("CND");
+  const otherGroup = queryInvId("AMMO") || queryInvId("OTHER");
   const degGroup = queryInvId("DEG");
+  setCondVisible(!hideForSoins, degGroup);
+  setCondVisible(!hideForSoins, cndGroup);
+  setCondVisible(!hideForSoins, otherGroup);
   if (degGroup) {
     const forceVisible = (el, visible) => {
       if (!el) return;
