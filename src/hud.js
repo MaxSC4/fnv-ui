@@ -1,4 +1,5 @@
 import Events from "./Events";
+import notificationSvg from "./assets/notification/notification_svg";
 
 (function () {
   if (window.__FNV_HUD_INIT__) return;
@@ -193,6 +194,27 @@ import Events from "./Events";
     if (/^(data:|https?:|file:)/i.test(trimmed)) return trimmed;
     if (trimmed.startsWith("icons/")) return trimmed;
     return `icons/${trimmed.replace(/^\/+/, "")}`;
+  }
+
+  function prefixSvgIds(svgText, prefix) {
+    if (!svgText || !prefix) return svgText;
+    const idPrefix = `${prefix}__`;
+    const withIds = svgText.replace(/id="([^"]+)"/g, (match, id) => {
+      if (id.startsWith(idPrefix)) return match;
+      return `id="${idPrefix}${id}"`;
+    });
+    const withUrls = withIds.replace(/url\(#([^)]+)\)/g, (match, id) => {
+      if (id.startsWith(idPrefix)) return match;
+      return `url(#${idPrefix}${id})`;
+    });
+    const withHref = withUrls.replace(/href="#([^"]+)"/g, (match, id) => {
+      if (id.startsWith(idPrefix)) return match;
+      return `href="#${idPrefix}${id}"`;
+    });
+    return withHref.replace(/xlink:href="#([^"]+)"/g, (match, id) => {
+      if (id.startsWith(idPrefix)) return match;
+      return `xlink:href="#${idPrefix}${id}"`;
+    });
   }
 
   function stripSvgIds(root) {
@@ -1017,6 +1039,114 @@ import Events from "./Events";
     return { title: lines[0], subtitle: lines.slice(1).join(" ") };
   }
 
+  function setNotificationText(el, lines) {
+    if (!el) return;
+    const textLines = Array.isArray(lines) ? lines.filter(Boolean) : [String(lines || "")].filter(Boolean);
+    const tspans = el.querySelectorAll ? el.querySelectorAll("tspan") : null;
+    if (!tspans || tspans.length === 0) {
+      el.textContent = textLines.join(" ");
+      return;
+    }
+    const maxLines = tspans.length;
+    const normalized = textLines.length > maxLines
+      ? [...textLines.slice(0, maxLines - 1), textLines.slice(maxLines - 1).join(" ")]
+      : textLines;
+    tspans.forEach((tspan, idx) => {
+      tspan.textContent = normalized[idx] || "";
+    });
+  }
+
+  function getShapeInsideRectId(el) {
+    if (!el) return "";
+    const style = el.getAttribute("style") || "";
+    const match = style.match(/shape-inside:url\(#([^)]+)\)/);
+    return match ? match[1] : "";
+  }
+
+  function measureTspanWidth(tspan) {
+    if (!tspan) return 0;
+    if (typeof tspan.getComputedTextLength === "function") {
+      const len = tspan.getComputedTextLength();
+      return Number.isFinite(len) ? len : 0;
+    }
+    const box = tspan.getBBox?.();
+    return box && Number.isFinite(box.width) ? box.width : 0;
+  }
+
+  function wrapSvgText(el, text, maxWidth, maxLines) {
+    if (!el) return;
+    const tspans = el.querySelectorAll ? Array.from(el.querySelectorAll("tspan")) : [];
+    if (!tspans.length) {
+      el.textContent = text || "";
+      return;
+    }
+    const words = String(text || "").split(/\s+/).filter(Boolean);
+    if (!words.length) {
+      tspans.forEach((tspan) => { tspan.textContent = ""; });
+      return;
+    }
+    const lineLimit = Math.max(1, Math.min(maxLines || tspans.length, tspans.length));
+    const lines = [];
+    let line = "";
+    let idx = 0;
+    while (idx < words.length && lines.length < lineLimit - 1) {
+      const candidate = line ? `${line} ${words[idx]}` : words[idx];
+      tspans[0].textContent = candidate;
+      tspans.slice(1).forEach((tspan) => { tspan.textContent = ""; });
+      const width = measureTspanWidth(tspans[0]);
+      if (width <= maxWidth || !line) {
+        line = candidate;
+        idx += 1;
+        continue;
+      }
+      lines.push(line);
+      line = "";
+    }
+    const remaining = words.slice(idx);
+    const lastLine = line ? `${line}${remaining.length ? " " : ""}${remaining.join(" ")}` : remaining.join(" ");
+    if (lastLine) lines.push(lastLine);
+    tspans.forEach((tspan, i) => {
+      tspan.textContent = lines[i] || "";
+    });
+  }
+
+  function scaleSvgFont(el, scale) {
+    if (!el || !Number.isFinite(scale) || scale <= 0) return;
+    const style = el.getAttribute("style") || "";
+    const match = style.match(/font-size:\s*([0-9.]+)px/i);
+    if (match) {
+      const base = Number(match[1]);
+      if (Number.isFinite(base) && base > 0) {
+        const next = (base * scale).toFixed(3);
+        const nextStyle = style.replace(/font-size:\s*[0-9.]+px/i, `font-size:${next}px`);
+        el.setAttribute("style", nextStyle);
+        return;
+      }
+    }
+    const attrSize = Number(el.getAttribute("font-size"));
+    if (Number.isFinite(attrSize) && attrSize > 0) {
+      el.setAttribute("font-size", (attrSize * scale).toFixed(3));
+    }
+  }
+
+  function applyIconClipLayoutRect(iconEl, clipRect, scale = 0.7) {
+    if (!iconEl || !clipRect) return;
+    const rectX = Number(clipRect.getAttribute("x"));
+    const rectY = Number(clipRect.getAttribute("y"));
+    const rectW = Number(clipRect.getAttribute("width"));
+    const rectH = Number(clipRect.getAttribute("height"));
+    if (![rectX, rectY, rectW, rectH].every(Number.isFinite)) return;
+    const nextW = rectW * scale;
+    const nextH = rectH * scale;
+    const nextX = rectX + (rectW - nextW) / 2;
+    const nextY = rectY + (rectH - nextH) / 2;
+    iconEl.setAttribute("x", `${nextX}`);
+    iconEl.setAttribute("y", `${nextY}`);
+    iconEl.setAttribute("width", `${nextW}`);
+    iconEl.setAttribute("height", `${nextH}`);
+    iconEl.setAttribute("preserveAspectRatio", "xMidYMid meet");
+  }
+
   function notify(payload) {
     const baseText = payload?.text ?? "";
     const titleRaw = payload?.title ?? payload?.subject ?? "";
@@ -1040,36 +1170,40 @@ import Events from "./Events";
     const frame = document.createElement("div");
     frame.className = "fnv_notify_frame";
 
-    const iconEl = document.createElement("div");
-    iconEl.className = "fnv_notify_icon";
-    if (iconRaw) {
-      const img = document.createElement("img");
-      img.className = "fnv_notify_icon_img";
-      img.src = iconRaw;
-      img.alt = "";
-      img.setAttribute("aria-hidden", "true");
-      iconEl.appendChild(img);
-    } else {
-      iconEl.classList.add("empty");
+    const uid = `notify_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const svgMarkup = prefixSvgIds(notificationSvg || "", uid);
+    frame.innerHTML = svgMarkup;
+    const svg = frame.querySelector("svg");
+      if (svg) {
+        const textEl = svg.querySelector(`#${uid}__NOTIFICATION_TEXT_TO_MODIFY`);
+        const clipRect = svg.querySelector(`#${uid}__NOTIFICATION_ICON_CLIP`);
+      const textLines = lines
+        ? [lines.title, lines.subtitle].filter(Boolean)
+        : [text, subtitle].filter(Boolean);
+      const fullText = textLines.join(" ").trim();
+      const rectId = getShapeInsideRectId(textEl);
+      const rectEl = rectId ? svg.querySelector(`#${uid}__${rectId}`) : null;
+      const rectW = Number(rectEl?.getAttribute("width"));
+      if (fullText && Number.isFinite(rectW) && rectW > 0) {
+        wrapSvgText(textEl, fullText, rectW, 3);
+      } else {
+        setNotificationText(textEl, textLines);
+      }
+
+      if (clipRect) {
+        const iconId = `${uid}__notification_icon`;
+        let iconEl = svg.querySelector(`#${iconId}`);
+        if (!iconEl) {
+          iconEl = document.createElementNS("http://www.w3.org/2000/svg", "image");
+          iconEl.setAttribute("id", iconId);
+          iconEl.setAttribute("class", "fnv_notify_icon_img");
+          clipRect.parentElement?.insertBefore(iconEl, clipRect.nextSibling);
+        }
+        applyIconClipLayoutRect(iconEl, clipRect, 0.85);
+        setSvgImageHref(iconEl, iconRaw);
+      }
     }
 
-    const textEl = document.createElement("div");
-    textEl.className = "fnv_notify_text";
-
-    const titleEl = document.createElement("div");
-    titleEl.className = "fnv_notify_title";
-    titleEl.textContent = lines ? lines.title : text;
-
-    const subtitleEl = document.createElement("div");
-    subtitleEl.className = "fnv_notify_subtitle";
-    subtitleEl.textContent = lines ? lines.subtitle : subtitle;
-    if (!subtitleEl.textContent) subtitleEl.classList.add("fnv_hidden");
-
-    textEl.appendChild(titleEl);
-    textEl.appendChild(subtitleEl);
-
-    frame.appendChild(iconEl);
-    frame.appendChild(textEl);
     wrap.appendChild(frame);
 
     notifs.appendChild(wrap);
