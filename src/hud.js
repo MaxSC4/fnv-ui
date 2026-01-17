@@ -3610,7 +3610,7 @@ function applyInventorySubPageVisibility(){
   const strGroup = queryInvId("STR");
   setCondVisible(showDps, dpsGroup);
   setCondVisible(showStr, strGroup);
-  const hideForSoins = subPage === "SOINS";
+  const hideForSoins = subPage === "SOINS" || subPage === "DIVERS" || subPage === "MUNITIONS";
   const cndGroup = queryInvId("CND");
   const otherGroup = queryInvId("AMMO") || queryInvId("OTHER");
   const degGroup = queryInvId("DEG");
@@ -3618,7 +3618,7 @@ function applyInventorySubPageVisibility(){
   setCondVisible(!hideForSoins, cndGroup);
   setCondVisible(!hideForSoins, otherGroup);
   if (invSvgState.effectsRow && invSvgState.effectsRowBaseTransform) {
-    if (subPage === "SOINS" && invSvgState.effectsRowGap != null) {
+    if (hideForSoins && invSvgState.effectsRowGap != null) {
       const nextY = invSvgState.effectsRowBaseY - invSvgState.effectsRowGap;
       invSvgState.effectsRow.setAttribute(
         "transform",
