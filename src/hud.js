@@ -2890,6 +2890,9 @@ function updateInventoryRowStates(){
   };
 
   const raw = String(text ?? "");
+  if (row.nameText === raw && row.nameMeasured) return;
+  row.nameText = raw;
+  row.nameMeasured = true;
   const tspans = Array.from(nameEl.children).filter((el) => el.tagName === "tspan");
   if (!tspans.length) {
     nameEl.textContent = raw;
@@ -2931,15 +2934,23 @@ function updateInventoryRowStates(){
       isTwoLines = !!line2;
     }
 
-    if (invSvgState.rowHoverBaseHeight && invSvgState.rowHoverSingleHeight && row.hoveredEl) {
-      const nextHeight = isTwoLines ? invSvgState.rowHoverBaseHeight : invSvgState.rowHoverSingleHeight;
-      row.hoveredEl.setAttribute("height", String(nextHeight));
+    const singleHeight = Number.isFinite(invSvgState.rowHoverSingleHeight)
+      ? invSvgState.rowHoverSingleHeight
+      : invSvgState.rowHoverBaseHeight;
+    const doubleHeight = Number.isFinite(invSvgState.rowHoverBaseHeight)
+      ? invSvgState.rowHoverBaseHeight
+      : singleHeight;
+    const baseHeight = isTwoLines ? doubleHeight : singleHeight;
+    if (row.hoveredEl && Number.isFinite(baseHeight)) {
+      row.hoveredEl.setAttribute("height", String(baseHeight));
     }
-    if (invSvgState.rowGap != null) {
-      const baseHeight = isTwoLines ? invSvgState.rowHoverBaseHeight : invSvgState.rowHoverSingleHeight;
-      row.rowHeight = baseHeight + invSvgState.rowGap;
-      updateInventoryRowPositions();
-      updateInventoryScrollBounds();
+    if (invSvgState.rowGap != null && Number.isFinite(baseHeight)) {
+      const nextHeight = Number(baseHeight) + invSvgState.rowGap;
+      if (Number.isFinite(nextHeight)) {
+        if (row.rowHeight == null || Math.abs(row.rowHeight - nextHeight) > DOM_EPSILON) {
+          row.rowHeight = nextHeight;
+        }
+      }
     }
   }
 
@@ -3052,13 +3063,13 @@ function renderInventorySvg(state){
     invSvgState.scrollOffset = 0;
     invSvgState.hoverId = null;
 
-    weapons.forEach((weapon, idx) => {
-      const clone = invSvgState.rowTemplate.cloneNode(true);
-      const prefix = invSvgState.prefix ? `${invSvgState.prefix}__` : "";
-      const nameEl = clone.querySelector(`#${prefix}item_name`);
-      const hoveredEl = clone.querySelector(`#${prefix}hovered_box`);
-      const notEqEl = clone.querySelector(`#${prefix}rect35`);
-      const eqEl = clone.querySelector(`#${prefix}equipped`);
+      weapons.forEach((weapon, idx) => {
+        const clone = invSvgState.rowTemplate.cloneNode(true);
+        const prefix = invSvgState.prefix ? `${invSvgState.prefix}__` : "";
+        const nameEl = clone.querySelector(`#${prefix}item_name`);
+        const hoveredEl = clone.querySelector(`#${prefix}hovered_box`);
+        const notEqEl = clone.querySelector(`#${prefix}rect35`);
+        const eqEl = clone.querySelector(`#${prefix}equipped`);
 
       if (nameEl) {
         nameEl.classList.add("inv_item_name");
@@ -3096,16 +3107,17 @@ function renderInventorySvg(state){
       });
 
       invSvgState.itemScroll.appendChild(clone);
-      setInventoryRowName({ nameEl, hoveredEl }, weapon.name);
-        invSvgState.rows.push({
-          root: clone,
-          nameEl,
-          hoveredEl,
-          notEqEl,
-          eqEl,
-          weaponId: weapon.id,
-          rowHeight: invSvgState.rowHeight
-        });
+      const rowObj = {
+        root: clone,
+        nameEl,
+        hoveredEl,
+        notEqEl,
+        eqEl,
+        weaponId: weapon.id,
+        rowHeight: invSvgState.rowHeight
+      };
+      setInventoryRowName(rowObj, weapon.name);
+      invSvgState.rows.push(rowObj);
       });
     } else {
       weapons.forEach((weapon, idx) => {
