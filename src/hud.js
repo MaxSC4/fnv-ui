@@ -369,6 +369,13 @@ import Events from "./Events";
     category: "OBJETS",
     subPage: "ARMES"
   };
+  const invSubPageByCategory = {
+    weapons: "ARMES",
+    apparel: "ARMURE",
+    aid: "SOINS",
+    misc: "DIVERS",
+    ammo: "MUNITIONS"
+  };
 
   function initHudSvg(event) {
     const eventRoot = event?.detail?.root;
@@ -2969,11 +2976,14 @@ function renderInventorySvg(state){
 
   invUiState.open = true;
   invUiState.category = "OBJETS";
-  invUiState.subPage = selection.category ? String(selection.category).toUpperCase() : "ARMES";
+  invUiState.subPage = selection.category
+    ? (invSubPageByCategory[String(selection.category).toLowerCase()] || "ARMES")
+    : "ARMES";
   if (invSvgState.root) {
     invSvgState.root.dataset.category = invUiState.category;
     invSvgState.root.dataset.subpage = invUiState.subPage;
   }
+  applyInventorySubPageVisibility();
 
   const weapons = selection.items.map((item, idx) => toWeapon(item, state, idx));
   invSvgState.weapons = weapons;
@@ -3067,6 +3077,42 @@ function bindInventorySvgInteractions(){
   invSvgState.bound = true;
   const target = invSvgState.itemScroll || invSvgState.svg;
   if (!target) return;
+  const tabPairs = [
+    ["armes_statut_box", "armes_hovered", "armes_selected_box", "weapons"],
+    ["armure_statut_box", "armure_hovered", "armure_selected_box", "apparel"],
+    ["soins_statut_box", "soins_hovered", "soins_selected_box", "aid"],
+    ["divers_statut_box", "divers_hovered", "divers_selected_box", "misc"],
+    ["munitions_statut_box", "munitions_hovered", "munitions_selected_box", "ammo"]
+  ];
+  const isVisible = (el) => {
+    if (!el) return false;
+    if (el.style?.display === "none") return false;
+    if (el.getAttribute?.("display") === "none") return false;
+    const opacityAttr = el.getAttribute?.("opacity");
+    if (opacityAttr != null && Number(opacityAttr) <= 0) return false;
+    if (el.style?.opacity && Number(el.style.opacity) <= 0) return false;
+    return true;
+  };
+  tabPairs.forEach(([boxId, hoveredId, selectedId, category]) => {
+    const box = queryInvId(boxId);
+    const hovered = queryInvId(hoveredId);
+    const selected = queryInvId(selectedId);
+    if (!box || !hovered) return;
+    hovered.style.opacity = "0";
+    box.style.pointerEvents = "auto";
+    box.addEventListener("mouseenter", () => {
+      hovered.style.opacity = isVisible(selected) ? "0" : "1";
+    });
+    box.addEventListener("mouseleave", () => {
+      hovered.style.opacity = "0";
+    });
+    box.addEventListener("click", () => {
+      if (!invState?.data) return;
+      invState.category = category;
+      invState.index = 0;
+      renderInventory(invState.data);
+    });
+  });
   target.addEventListener("wheel", (e) => {
     if (!invSvgState.rowHeight || invSvgState.scrollMax <= 0) return;
     const dir = e.deltaY > 0 ? 1 : -1;
@@ -3467,7 +3513,7 @@ function renderInvList(state, selection){
     row.textContent = "...";
     listEl.appendChild(row);
     return;
-  }
+}
 
   selection.items.forEach((item, idx) => {
     const row = document.createElement("div");
@@ -3507,6 +3553,45 @@ function renderInvList(state, selection){
     });
 
     listEl.appendChild(row);
+  });
+}
+
+function applyInventorySubPageVisibility(){
+  const subPage = invUiState.subPage || "ARMES";
+  const showDps = subPage !== "ARMURE";
+  const showStr = subPage !== "ARMURE";
+  const dpsGroup = queryInvId("DPS");
+  const strGroup = queryInvId("STR");
+  setCondVisible(showDps, dpsGroup);
+  setCondVisible(showStr, strGroup);
+
+  const selectedMap = {
+    ARMES: "armes_selected_box",
+    ARMURE: "armure_selected_box",
+    SOINS: "soins_selected_box",
+    DIVERS: "divers_selected_box",
+    MUNITIONS: "munitions_selected_box"
+  };
+  const hoveredMap = {
+    ARMES: "armes_hovered",
+    ARMURE: "armure_hovered",
+    SOINS: "soins_hovered",
+    DIVERS: "divers_hovered",
+    MUNITIONS: "munitions_hovered"
+  };
+  Object.entries(selectedMap).forEach(([key, id]) => {
+    const el = queryInvId(id);
+    if (!el) return;
+    const visible = key === subPage;
+    setCondVisible(visible, el);
+    if (visible) {
+      el.setAttribute("opacity", "1");
+      el.style.opacity = "1";
+    }
+    const hovered = queryInvId(hoveredMap[key]);
+    if (hovered) {
+      hovered.style.opacity = visible ? "0" : hovered.style.opacity;
+    }
   });
 }
 
