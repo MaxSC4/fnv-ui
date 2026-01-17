@@ -1740,10 +1740,30 @@ function ensureUiFocus() {
     ensureUiFocus();
     window.addEventListener("mousedown", ensureUiFocus, true);
     ensureHudSvgReady();
-    ensureInventorySvgReady();
-    setHeadingTarget(0);
+      ensureInventorySvgReady();
+      setHeadingTarget(0);
+      window.addEventListener(
+        "wheel",
+        (event) => {
+          if (event.ctrlKey) {
+            event.preventDefault();
+          }
+        },
+        { passive: false }
+      );
+      window.addEventListener("keydown", (event) => {
+        if (!event.ctrlKey) return;
+        const key = event.key;
+        const code = event.code;
+        const isPlus = key === "+" || key === "=" || code === "Equal" || code === "NumpadAdd";
+        const isMinus = key === "-" || code === "Minus" || code === "NumpadSubtract";
+        const isZero = key === "0" || code === "Digit0" || code === "Numpad0";
+        if (isPlus || isMinus || isZero) {
+          event.preventDefault();
+        }
+      });
 
-    if (process.env.NODE_ENV === "development") {
+      if (process.env.NODE_ENV === "development") {
       const ensureDebugState = () => {
         if (!lastHudState) {
           lastHudState = {
