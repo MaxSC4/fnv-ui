@@ -2815,9 +2815,13 @@ function toWeapon(item, state, index){
     const uniqueId = `${id || "item"}:${item?.instance_id ?? item?.stack_key ?? index ?? 0}`;
     return {
       id: uniqueId,
+      item_id: item?.item_id ?? item?.id ?? "",
+      instance_id: item?.instance_id ?? null,
+      stack_key: item?.stack_key ?? null,
       name,
       ammoText,
       equipped,
+      actions: Array.isArray(item?.actions) ? item.actions : [],
       iconUrl,
       dps: item?.dps ?? item?.damage_per_second,
       vw: item?.vw ?? item?.value_over_weight,
@@ -3005,7 +3009,7 @@ function updateInventoryTopStats(state){
   const dt = state?.player_stats?.dt ?? state?.dt ?? state?.stats?.dt ?? state?.resistance?.dt;
   setSvgText(invSvgState.dtText, dt ?? "--");
 
-  const caps = state?.money?.caps ?? state?.caps ?? 0;
+  const caps = state?.player_stats?.caps ?? state?.money?.caps ?? state?.caps ?? 0;
   setSvgText(invSvgState.capsText, Math.floor(Number(caps)));
 }
 
@@ -3084,6 +3088,11 @@ function renderInventorySvg(state){
         invSvgState.selectedId = weapon.id;
         updateInventoryDetail(invSvgState.weapons[idx]);
         updateInventoryRowStates();
+      });
+      clone.addEventListener("dblclick", () => {
+        if (!invState?.data) return;
+        const action = getInvActivateAction(weapon);
+        sendInvAction(action, weapon, invState.category);
       });
 
       invSvgState.itemScroll.appendChild(clone);
@@ -3894,6 +3903,15 @@ function getPrimaryInvAction(item){
   return order.find((a) => actions.includes(a)) || actions[0] || null;
 }
 
+function getInvActivateAction(item){
+  const actions = Array.isArray(item?.actions) ? item.actions : [];
+  if (actions.includes("use")) return "use";
+  const equipped = !!item?.equipped;
+  if (equipped && actions.includes("unequip")) return "unequip";
+  if (actions.includes("equip")) return "equip";
+  return actions[0] || null;
+}
+
 function sendInvAction(action, item, category, targetSlot){
   if (!action || !item) return;
 
@@ -4070,7 +4088,7 @@ document.addEventListener("keydown", (e) => {
   } else if (invState.page === "items" && (e.code === "KeyE" || e.key === "Enter")) {
     const selection = normalizeInvSelection(invState.data);
     const item = selection.items[selection.index];
-    const action = getPrimaryInvAction(item);
+    const action = getInvActivateAction(item);
     sendInvAction(action, item, selection.category);
     e.preventDefault();
   } else if (invState.page === "items" && (e.code === "KeyR" || e.key === "r" || e.key === "R")) {
