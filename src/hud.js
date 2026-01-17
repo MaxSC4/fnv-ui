@@ -3021,6 +3021,7 @@ function toWeapon(item, state, index){
       other: item?.other ?? item?.ammo_type ?? item?.ammoType,
       ammoMag: item?.ammo_mag ?? item?.mag_size,
       ammoReserve: item?.ammo_reserve ?? item?.ammo_stock,
+      qty: item?.qty ?? item?.quantity,
       weight: item?.weight ?? item?.wg,
       value: item?.value ?? item?.val,
       description: item?.desc ?? item?.description,
@@ -3061,7 +3062,7 @@ function updateInventoryRowStates(){
   });
 }
 
-  function setInventoryRowName(row, text){
+  function setInventoryRowName(row, text, qty){
     if (!row?.nameEl || !row?.hoveredEl) return;
     const nameEl = row.nameEl;
     const box = row.hoveredEl.getBBox?.();
@@ -3076,7 +3077,10 @@ function updateInventoryRowStates(){
     return 0;
   };
 
-  const raw = String(text ?? "");
+  const showQty = invUiState.subPage !== "ARMES" && invUiState.subPage !== "ARMURE";
+  const qtyNum = Number(qty);
+  const qtySuffix = showQty && Number.isFinite(qtyNum) && qtyNum > 1 ? ` (${Math.floor(qtyNum)})` : "";
+  const raw = String(text ?? "") + qtySuffix;
   if (row.nameText === raw && row.nameMeasured) return;
   row.nameText = raw;
   row.nameMeasured = true;
@@ -3303,14 +3307,14 @@ function renderInventorySvg(state){
         weaponId: weapon.id,
         rowHeight: invSvgState.rowHeight
       };
-      setInventoryRowName(rowObj, weapon.name);
+      setInventoryRowName(rowObj, weapon.name, weapon.qty);
       invSvgState.rows.push(rowObj);
       });
     } else {
       weapons.forEach((weapon, idx) => {
         const row = invSvgState.rows[idx];
       if (!row) return;
-      setInventoryRowName(row, weapon.name);
+      setInventoryRowName(row, weapon.name, weapon.qty);
       if (row.eqEl) row.eqEl.style.opacity = weapon.equipped ? "1" : "0";
       if (row.notEqEl) row.notEqEl.style.opacity = weapon.equipped ? "0" : "1";
     });
