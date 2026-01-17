@@ -355,6 +355,7 @@ import Events from "./Events";
     valText: null,
     strText: null,
     degText: null,
+    otherText: null,
     effectsText: null,
     iconImage: null,
     pdsText: null,
@@ -508,6 +509,7 @@ import Events from "./Events";
     invSvgState.valText = queryInvId("VAL_text_to_modify");
     invSvgState.strText = queryInvId("STR_text_to_modify");
     invSvgState.degText = queryInvId("DEG_text_to_modify");
+    invSvgState.otherText = queryInvId("other_text_to_modify");
     invSvgState.effectsText = queryInvId("effets_text_to_modify");
     invSvgState.iconImage = queryInvId("item_icon");
     if (!invSvgState.iconImage) {
@@ -2757,10 +2759,10 @@ function toWeapon(item, state, index){
   const equipped = !!item?.equipped || (item?.instance_id != null && item.instance_id === equippedId);
     const iconUrl = item?.iconUrl ?? item?.item_icon ?? item?.icon_url ?? item?.icon ?? "";
     const effectsRaw = item?.effects ?? item?.effects_text ?? item?.effect;
-  const effects = Array.isArray(effectsRaw)
-    ? effectsRaw.map((e) => String(e))
-    : String(effectsRaw ?? "").split("\n").filter(Boolean);
-  const uniqueId = `${id || "item"}:${item?.instance_id ?? item?.stack_key ?? index ?? 0}`;
+    const effects = Array.isArray(effectsRaw)
+      ? effectsRaw.map((e) => String(e))
+      : String(effectsRaw ?? "").split("\n").filter(Boolean);
+    const uniqueId = `${id || "item"}:${item?.instance_id ?? item?.stack_key ?? index ?? 0}`;
     return {
       id: uniqueId,
       name,
@@ -2774,13 +2776,16 @@ function toWeapon(item, state, index){
       dt: item?.dt ?? item?.damage_threshold,
       dr: item?.dr ?? item?.damage_resistance,
       deg: item?.deg ?? item?.damage,
-    str: item?.str ?? item?.strength,
-    weight: item?.weight ?? item?.wg,
-    value: item?.value ?? item?.val,
-    description: item?.desc ?? item?.description,
-    effects
-  };
-}
+      str: item?.str ?? item?.strength,
+      other: item?.other ?? item?.ammo_type ?? item?.ammoType,
+      ammoMag: item?.ammo_mag ?? item?.mag_size,
+      ammoReserve: item?.ammo_reserve ?? item?.ammo_stock,
+      weight: item?.weight ?? item?.wg,
+      value: item?.value ?? item?.val,
+      description: item?.desc ?? item?.description,
+      effects
+    };
+  }
 
   function updateInventoryRowPositions(){
     if (!invSvgState.rowHeight) return;
@@ -2893,6 +2898,7 @@ function updateInventoryRowStates(){
       setSvgText(invSvgState.valText, "");
       setSvgText(invSvgState.strText, "");
       setSvgText(invSvgState.degText, "");
+      setSvgText(invSvgState.otherText, "");
       setSvgFlowText(invSvgState.effectsText, "");
       setSvgImageHref(invSvgState.iconImage, "");
       updateInventoryCondBar(null);
@@ -2906,6 +2912,15 @@ function updateInventoryRowStates(){
   setSvgText(invSvgState.valText, weapon.value ?? "—");
   setSvgText(invSvgState.strText, weapon.str ?? "—");
   setSvgText(invSvgState.degText, weapon.deg ?? "—");
+  const mag = Number(weapon.ammoMag);
+  const reserve = Number(weapon.ammoReserve);
+  const hasAmmoCounts = Number.isFinite(mag) && Number.isFinite(reserve);
+  const ammoLine = weapon.ammoText ?? "";
+  const ammoSuffix = hasAmmoCounts
+    ? ` (${Math.floor(mag)}/${Math.floor(reserve)})`
+    : (ammoLine && ammoLine !== "—" ? ` (${ammoLine})` : "");
+  const otherText = weapon.other ? `${weapon.other}${ammoSuffix}` : "";
+  setSvgText(invSvgState.otherText, otherText);
 
     if (Array.isArray(weapon.effects) && weapon.effects.length > 0) {
       setSvgFlowText(invSvgState.effectsText, weapon.effects);
