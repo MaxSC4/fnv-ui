@@ -218,6 +218,24 @@ import Events from "./Events";
     return svg.querySelector(`#${targetId}`);
   }
 
+  function queryInvLabel(label) {
+    const svg = invSvgState.svg;
+    if (!svg) return null;
+    return svg.querySelector(`[inkscape\\:label="${label}"]`);
+  }
+
+  function parseTranslate(transform) {
+    if (!transform) return { x: 0, y: 0 };
+    const match = transform.match(/translate\(\s*([-\d.]+)[ ,]([-\d.]+)\s*\)/);
+    if (!match) return { x: 0, y: 0 };
+    const x = Number(match[1]);
+    const y = Number(match[2]);
+    return {
+      x: Number.isFinite(x) ? x : 0,
+      y: Number.isFinite(y) ? y : 0
+    };
+  }
+
   function getClipPathIdByRectId(rectId) {
     const rect = queryInvId(rectId) || queryInvClipLabel(rectId);
     const parent = rect?.parentElement;
@@ -361,7 +379,12 @@ import Events from "./Events";
     pdsText: null,
     dtText: null,
     hpText: null,
-    capsText: null
+    capsText: null,
+    effectsRow: null,
+    effectsRowBaseTransform: "",
+    effectsRowBaseX: 0,
+    effectsRowBaseY: 0,
+    effectsRowGap: null
   };
 
   const invUiState = {
@@ -536,6 +559,21 @@ import Events from "./Events";
     invSvgState.dtText = queryInvId("DT_text_to_modify");
     invSvgState.hpText = queryInvId("HP_text_to_modify");
     invSvgState.capsText = queryInvId("CAPS_text_to_modify");
+    invSvgState.effectsRow = queryInvId("effects_row");
+    if (invSvgState.effectsRow) {
+      invSvgState.effectsRowBaseTransform = invSvgState.effectsRow.getAttribute("transform") || "";
+      const { x, y } = parseTranslate(invSvgState.effectsRowBaseTransform);
+      invSvgState.effectsRowBaseX = x;
+      invSvgState.effectsRowBaseY = y;
+      const bottomRow = queryInvLabel("bottom_row");
+      if (bottomRow) {
+        const { y: bottomY } = parseTranslate(bottomRow.getAttribute("transform") || "");
+        if (Number.isFinite(bottomY)) {
+          const gap = y - bottomY;
+          invSvgState.effectsRowGap = Number.isFinite(gap) && gap > 0 ? gap : null;
+        }
+      }
+    }
     invSvgState.condBarGroup = queryInvId("cond_bar");
     invSvgState.condBarEmpty = queryInvId("cond_bar_empty");
     invSvgState.condBarFull = queryInvId("cond_bar_full");
@@ -3579,6 +3617,17 @@ function applyInventorySubPageVisibility(){
   setCondVisible(!hideForSoins, degGroup);
   setCondVisible(!hideForSoins, cndGroup);
   setCondVisible(!hideForSoins, otherGroup);
+  if (invSvgState.effectsRow && invSvgState.effectsRowBaseTransform) {
+    if (subPage === "SOINS" && invSvgState.effectsRowGap != null) {
+      const nextY = invSvgState.effectsRowBaseY - invSvgState.effectsRowGap;
+      invSvgState.effectsRow.setAttribute(
+        "transform",
+        `translate(${invSvgState.effectsRowBaseX.toFixed(SVG_ATTR_PRECISION)} ${nextY.toFixed(SVG_ATTR_PRECISION)})`
+      );
+    } else {
+      invSvgState.effectsRow.setAttribute("transform", invSvgState.effectsRowBaseTransform);
+    }
+  }
   if (degGroup) {
     const forceVisible = (el, visible) => {
       if (!el) return;
