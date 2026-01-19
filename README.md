@@ -15,13 +15,6 @@ https://github.com/MaxSC4/fnv-core
 - Container loot UI (compact view and transfer screen)
 - Custom styling for the Fallout NV look and pip-boy palette
 
-## UI conventions
-
-- Amber is the primary palette color (Fallout NV tone)
-- Monospace/condensed type, no rounded corners, no modern card effects
-- Scanlines and CRT-like touches are kept subtle
-- Keyboard first navigation, mouse allowed but not required
-
 ## Integration notes
 
 The UI reacts to events and payloads coming from the core server repo.
