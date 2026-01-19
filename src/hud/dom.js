@@ -1,0 +1,70 @@
+export const elHudLeft = () => document.getElementById("hud_hp_fallout");
+export const elHudLeftSvg = () => elHudLeft()?.querySelector("svg");
+
+export const elCaps = () => document.getElementById("caps_value");
+export const elNotifs = () => document.getElementById("fnv_notify");
+
+export const elRightSubBar = () => document.getElementById("fnv_right_sub_bar");
+export const getRightSubPrefix = () => elRightSubBar()?.dataset?.prefix || "";
+export const queryRightSubId = (id) => {
+  const root = elRightSubBar();
+  if (!root) return null;
+  const prefix = getRightSubPrefix();
+  const targetId = prefix ? `${prefix}__${id}` : id;
+  return root.querySelector(`#${targetId}`);
+};
+export const queryRightSubAll = (selector) => {
+  const root = elRightSubBar();
+  if (!root) return [];
+  const prefix = getRightSubPrefix();
+  if (!prefix) return root.querySelectorAll(selector);
+  const scoped = selector.replace(/#([A-Za-z0-9_-]+)/g, (_, id) => `#${prefix}__${id}`);
+  return root.querySelectorAll(scoped);
+};
+export const elApTicksClip = () => queryRightSubId("rect60");
+export const elAmmoText = () => queryRightSubId("text45");
+export const elAmmoTextSpan = () => queryRightSubId("tspan45");
+export const elCndArmorFill = () => queryRightSubId("rect15");
+export const elCndArmorEmpty = () => queryRightSubId("rect14");
+export const elCndArmorLabel = () => queryRightSubId("text69");
+export const elCndArmorChevronTop = () => queryRightSubId("g24");
+export const elCndArmorChevronBottom = () => queryRightSubId("g35");
+export const elCndWeaponFill = () => queryRightSubId("rect37");
+export const elCndWeaponEmpty = () => queryRightSubId("rect36");
+export const elCndWeaponLabel = () => queryRightSubId("text70");
+export const elCndWeaponChevronTop = () => queryRightSubId("g38");
+export const elCndWeaponChevronBottom = () => queryRightSubId("g39");
+export const elMicOpen = () => document.getElementById("mic_open");
+export const elMicOpenGlow = () => document.getElementById("mic_open_glow");
+export const elMicClosed = () => document.getElementById("mic_closed");
+export const elMicClosedGlow = () => document.getElementById("mic_closed_glow");
+
+export const elReticle = () => document.getElementById("fnv_reticle");
+export const elEnemy = () => document.getElementById("fnv_enemy");
+export const elEnemyName = () => document.getElementById("fnv_enemy_name");
+export const elEnemyFill = () => document.getElementById("fnv_enemy_fill");
+export const elContainer = () => document.getElementById("fnv_container");
+export const elContainerTitle = () => document.getElementById("fnv_container_title");
+export const elContainerWeight = () => document.getElementById("fnv_container_weight");
+export const elContainerList = () => document.getElementById("fnv_container_list");
+export const elTransfer = () => document.getElementById("fnv_transfer");
+export const elTransferLeftTitle = () => document.getElementById("fnv_transfer_left_title");
+export const elTransferLeftWeight = () => document.getElementById("fnv_transfer_left_weight");
+export const elTransferLeftList = () => document.getElementById("fnv_transfer_left_list");
+export const elTransferLeftUp = () => document.getElementById("fnv_transfer_left_up");
+export const elTransferLeftDown = () => document.getElementById("fnv_transfer_left_down");
+export const elTransferRightTitle = () => document.getElementById("fnv_transfer_right_title");
+export const elTransferRightWeight = () => document.getElementById("fnv_transfer_right_weight");
+export const elTransferRightList = () => document.getElementById("fnv_transfer_right_list");
+export const elTransferRightUp = () => document.getElementById("fnv_transfer_right_up");
+export const elTransferRightDown = () => document.getElementById("fnv_transfer_right_down");
+export const elTransferDetailsIcon = () => document.getElementById("fnv_transfer_details_icon");
+export const elTransferStatsGrid = () => document.getElementById("fnv_transfer_stats_grid");
+export const elTransferItemName = () => document.getElementById("fnv_transfer_item_name");
+export const elRepairMenu = () => document.getElementById("fnv_repair_menu");
+export const elRepairList = () => document.getElementById("fnv_repair_list");
+
+export const elInteract = () => document.getElementById("fnv_interact");
+export const elInteractKey = () => document.querySelector("#fnv_interact .fnv_interact_key");
+export const elInteractAction = () => document.querySelector("#fnv_interact .fnv_interact_action");
+export const elInteractName = () => document.querySelector("#fnv_interact .fnv_interact_name");
